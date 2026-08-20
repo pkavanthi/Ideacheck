@@ -1,1 +1,1 @@
-# Router initialization file
+# Routers package initialization

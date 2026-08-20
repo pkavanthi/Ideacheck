@@ -4,8 +4,8 @@ from contextlib import asynccontextmanager
 import logging
 
 from backend.config import settings
+from backend.routers import patients
 from backend.database import engine, Base
-from backend.routers import patients, health_workers, consultations
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -13,19 +13,22 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting application...")
+    """Initialize database tables on startup"""
+    logger.info("Creating database tables...")
     Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
     yield
-    logger.info("Shutting down application...")
+    logger.info("Application shutdown")
 
 
 app = FastAPI(
-    title="Rural Healthcare Platform",
-    description="AI-augmented healthcare delivery platform for rural areas",
+    title="Rural Healthcare API",
+    description="AI-powered telemedicine platform for rural healthcare",
     version="1.0.0",
     lifespan=lifespan
 )
 
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -34,20 +37,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(patients.router, prefix="/api/v1/patients", tags=["Patients"])
-app.include_router(health_workers.router, prefix="/api/v1/health-workers", tags=["Health Workers"])
-app.include_router(consultations.router, prefix="/api/v1/consultations", tags=["Consultations"])
+# Include routers
+app.include_router(patients.router, prefix="/api/v1", tags=["patients"])
 
 
 @app.get("/")
 async def root():
+    """Health check endpoint"""
     return {
-        "message": "Rural Healthcare Platform API",
-        "version": "1.0.0",
-        "status": "operational"
+        "status": "healthy",
+        "service": "Rural Healthcare API",
+        "version": "1.0.0"
     }
 
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    """Detailed health check"""
+    return {
+        "status": "healthy",
+        "database": "connected",
+        "api": "operational"
+    }

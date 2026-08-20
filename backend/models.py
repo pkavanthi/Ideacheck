@@ -1,71 +1,30 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Enum
-from sqlalchemy.orm import relationship
-from datetime import datetime
-import enum
-
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
+from sqlalchemy.sql import func
 from backend.database import Base
 
 
-class UserRole(str, enum.Enum):
-    PATIENT = "patient"
-    HEALTH_WORKER = "health_worker"
-    SPECIALIST = "specialist"
-
-
-class ConsultationStatus(str, enum.Enum):
-    SCHEDULED = "scheduled"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-
-
 class Patient(Base):
+    """Patient model for rural healthcare system"""
     __tablename__ = "patients"
 
     id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    phone = Column(String(20), nullable=False)
     date_of_birth = Column(DateTime, nullable=False)
-    address = Column(Text, nullable=True)
+    gender = Column(String(20), nullable=False)
+    phone_number = Column(String(20), nullable=False)
+    email = Column(String(100), nullable=True)
+    address = Column(Text, nullable=False)
+    village = Column(String(100), nullable=False)
+    district = Column(String(100), nullable=False)
     medical_history = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    allergies = Column(Text, nullable=True)
+    current_medications = Column(Text, nullable=True)
+    emergency_contact_name = Column(String(100), nullable=True)
+    emergency_contact_phone = Column(String(20), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
 
-    consultations = relationship("Consultation", back_populates="patient")
-
-
-class HealthWorker(Base):
-    __tablename__ = "health_workers"
-
-    id = Column(Integer, primary_key=True, index=True)
-    first_name = Column(String(100), nullable=False)
-    last_name = Column(String(100), nullable=False)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    phone = Column(String(20), nullable=False)
-    certification = Column(String(255), nullable=True)
-    location = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    consultations = relationship("Consultation", back_populates="health_worker")
-
-
-class Consultation(Base):
-    __tablename__ = "consultations"
-
-    id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
-    health_worker_id = Column(Integer, ForeignKey("health_workers.id"), nullable=False)
-    scheduled_at = Column(DateTime, nullable=False)
-    status = Column(Enum(ConsultationStatus), default=ConsultationStatus.SCHEDULED)
-    symptoms = Column(Text, nullable=True)
-    diagnosis = Column(Text, nullable=True)
-    treatment_plan = Column(Text, nullable=True)
-    notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    patient = relationship("Patient", back_populates="consultations")
-    health_worker = relationship("HealthWorker", back_populates="consultations")
+    def __repr__(self):
+        return f"<Patient(id={self.id}, name={self.first_name} {self.last_name})>"
