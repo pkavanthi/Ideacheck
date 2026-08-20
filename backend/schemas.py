@@ -1,58 +1,35 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
+from backend.models import ContentType, LanguageCode
 
 
-# Student Schemas
-class StudentBase(BaseModel):
-    first_name: str = Field(..., min_length=1, max_length=100)
-    last_name: str = Field(..., min_length=1, max_length=100)
-    email: EmailStr
-    grade_level: Optional[str] = None
-    learning_style: Optional[str] = None
-
-
-class StudentCreate(StudentBase):
-    pass
-
-
-class StudentUpdate(BaseModel):
-    first_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    last_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    email: Optional[EmailStr] = None
-    grade_level: Optional[str] = None
-    learning_style: Optional[str] = None
-
-
-class Student(StudentBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-# Course Schemas
-class CourseBase(BaseModel):
+# Content Schemas
+class ContentBase(BaseModel):
+    """Base content schema"""
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    subject: str = Field(..., min_length=1, max_length=100)
-    difficulty_level: Optional[str] = None
+    content_type: ContentType
+    original_language: LanguageCode
+    original_text: str = Field(..., min_length=1)
+    created_by: str = Field(..., min_length=1, max_length=255)
 
 
-class CourseCreate(CourseBase):
+class ContentCreate(ContentBase):
+    """Schema for creating content"""
     pass
 
 
-class CourseUpdate(BaseModel):
+class ContentUpdate(BaseModel):
+    """Schema for updating content"""
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
-    subject: Optional[str] = Field(None, min_length=1, max_length=100)
-    difficulty_level: Optional[str] = None
+    content_type: Optional[ContentType] = None
+    original_text: Optional[str] = Field(None, min_length=1)
 
 
-class Course(CourseBase):
+class ContentResponse(ContentBase):
+    """Schema for content response"""
     id: int
     created_at: datetime
     updated_at: datetime
@@ -61,26 +38,39 @@ class Course(CourseBase):
         from_attributes = True
 
 
-# Enrollment Schemas
-class EnrollmentBase(BaseModel):
-    student_id: int
-    course_id: int
+class ContentWithTranslations(ContentResponse):
+    """Schema for content with translations"""
+    translations: List["TranslationResponse"] = []
+
+    class Config:
+        from_attributes = True
 
 
-class EnrollmentCreate(EnrollmentBase):
-    pass
+# Translation Schemas
+class TranslationBase(BaseModel):
+    """Base translation schema"""
+    target_language: LanguageCode
+    translated_text: str = Field(..., min_length=1)
+    translated_title: Optional[str] = Field(None, max_length=255)
 
 
-class EnrollmentUpdate(BaseModel):
-    progress: Optional[float] = Field(None, ge=0.0, le=100.0)
-    status: Optional[str] = None
+class TranslationCreate(TranslationBase):
+    """Schema for creating translation"""
+    content_id: int
 
 
-class Enrollment(EnrollmentBase):
+class TranslationUpdate(BaseModel):
+    """Schema for updating translation"""
+    translated_text: Optional[str] = Field(None, min_length=1)
+    translated_title: Optional[str] = Field(None, max_length=255)
+
+
+class TranslationResponse(TranslationBase):
+    """Schema for translation response"""
     id: int
-    enrollment_date: datetime
-    progress: float
-    status: str
+    content_id: int
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
