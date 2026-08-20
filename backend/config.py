@@ -3,27 +3,18 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    """Application settings"""
-    
-    # Application
-    APP_NAME: str = "Educational Platform API"
+    APP_NAME: str = "Rural Healthcare Diagnostic Hub"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     
-    # Database
-    DATABASE_URL: str = "sqlite:///./educational_platform.db"
+    DATABASE_URL: str
+    SECRET_KEY: str
     
-    # Security
-    SECRET_KEY: str = "your-secret-key-change-in-production"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
-    # CORS
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
     
-    # Server
-    HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     class Config:
         env_file = ".env"

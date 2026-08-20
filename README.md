@@ -1,111 +1,120 @@
-# Educational Platform API
+# Rural Healthcare Diagnostic Hub
 
-A personalized learning platform API designed for K-12 schools, higher education institutions, teachers, and students. This platform provides adaptive, technology-enhanced learning environments accessible to all institutions regardless of resources.
+Transform every rural health center into a connected diagnostic hub where geography no longer determines access to quality medical care, creating a comprehensive healthcare network that ensures no patient is left behind.
 
 ## Product Vision
 
-Every student receives world-class, personalized education tailored to their unique needs, preparing them for future challenges through adaptive, technology-enhanced learning environments accessible to all institutions regardless of resources.
+This application enables rural health workers and remote physician specialists to provide quality medical care to patients in underserved communities. It creates a connected network of healthcare facilities that bridges the gap between rural areas and specialized medical expertise.
 
 ## Target Audience
 
-- **K-12 Schools**: Primary and secondary educational institutions
-- **Higher Education**: Colleges and universities
-- **Teachers**: Educators seeking to enhance instruction
-- **Students**: Learners requiring personalized education
-- **Administrators**: Educational resource and outcome managers
+- Rural health workers
+- Remote physician specialists
+- Patients in underserved communities
+- Government health departments
+- Healthcare technology partners in developing regions
 
 ## Core Features
 
-- **Student Management**: Complete CRUD operations for student profiles
-- **Course Management**: Create and manage educational courses
-- **Personalized Learning**: Track student learning styles and preferences
-- **Progress Tracking**: Monitor student enrollment and course progress
+- **Health Center Management**: Complete CRUD operations for managing rural health centers
+- **Diagnostic Records**: Track and manage patient diagnostic information
+- **Connected Network**: Link health centers with specialists for remote consultations
 
 ## Technology Stack
 
-- **Framework**: FastAPI 0.104.1
-- **Database**: SQLAlchemy 2.0.23 with SQLite
-- **Validation**: Pydantic 2.5.0
-- **Server**: Uvicorn 0.24.0
-- **Architecture**: Modular Monolith
+- **Backend Framework**: FastAPI (Python)
+- **Database**: PostgreSQL with SQLAlchemy ORM
+- **API Architecture**: RESTful API with modular monolith design
+- **Configuration**: Pydantic Settings with environment variables
 
 ## Prerequisites
 
-- Python 3.8 or higher
+- Python 3.9 or higher
+- PostgreSQL 12 or higher
 - pip (Python package manager)
 
 ## Installation
 
-1. **Clone the repository** (or navigate to the project directory)
+1. **Clone the repository** (if applicable) or navigate to the project directory
 
 2. **Create a virtual environment**:
-   ```bash
-   python -m venv venv
-   ```
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-3. **Activate the virtual environment**:
-   - On Linux/Mac:
-     ```bash
-     source venv/bin/activate
-     ```
-   - On Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
+3. **Install dependencies**:
+```bash
+cd backend
+pip install -r requirements.txt
+```
 
-4. **Install dependencies**:
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
+4. **Set up environment variables**:
+```bash
+cp .env.example .env
+```
 
-5. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` file with your configuration settings.
+Edit `.env` file with your configuration:
+- Set `DATABASE_URL` to your PostgreSQL connection string
+- Generate secure values for `SECRET_KEY` and `JWT_SECRET_KEY`
+- Configure `ALLOWED_ORIGINS` for CORS
+
+5. **Initialize the database**:
+```bash
+# Create the database in PostgreSQL
+createdb healthcare_db
+
+# Run the application to create tables
+python -m backend.main
+```
 
 ## Running the Application
 
 ### Development Mode
 
-Start the FastAPI development server:
-
 ```bash
+cd backend
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at:
-- **API**: http://localhost:8000
-- **Interactive API Documentation**: http://localhost:8000/docs
-- **Alternative API Documentation**: http://localhost:8000/redoc
+The API will be available at: `http://localhost:8000`
 
 ### Production Mode
 
-For production deployment:
-
 ```bash
+cd backend
 uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
+## API Documentation
+
+Once the application is running, access the interactive API documentation:
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
 ## API Endpoints
 
-### Health Check
-- `GET /` - Root endpoint
+### Health Centers
+
+- `POST /api/v1/health-centers/` - Create a new health center
+- `GET /api/v1/health-centers/` - List all health centers
+- `GET /api/v1/health-centers/{id}` - Get a specific health center
+- `PUT /api/v1/health-centers/{id}` - Update a health center
+- `DELETE /api/v1/health-centers/{id}` - Delete a health center
+
+### Diagnostics
+
+- `POST /api/v1/diagnostics/` - Create a new diagnostic record
+- `GET /api/v1/diagnostics/` - List all diagnostic records
+- `GET /api/v1/diagnostics/{id}` - Get a specific diagnostic record
+- `PUT /api/v1/diagnostics/{id}` - Update a diagnostic record
+- `DELETE /api/v1/diagnostics/{id}` - Delete a diagnostic record
+
+### System
+
+- `GET /` - API information
 - `GET /health` - Health check endpoint
-
-### Students
-- `POST /api/v1/students/` - Create a new student
-- `GET /api/v1/students/` - Get all students (with pagination)
-- `GET /api/v1/students/{student_id}` - Get a specific student
-- `PUT /api/v1/students/{student_id}` - Update a student
-- `DELETE /api/v1/students/{student_id}` - Delete a student
-
-### Courses
-- `POST /api/v1/courses/` - Create a new course
-- `GET /api/v1/courses/` - Get all courses (with pagination)
-- `GET /api/v1/courses/{course_id}` - Get a specific course
-- `PUT /api/v1/courses/{course_id}` - Update a course
-- `DELETE /api/v1/courses/{course_id}` - Delete a course
 
 ## Project Structure
 
@@ -115,78 +124,67 @@ uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
 │   ├── __init__.py
 │   ├── main.py              # Application entry point
 │   ├── config.py            # Configuration management
-│   ├── database.py          # Database setup and session management
-│   ├── models.py            # SQLAlchemy database models
-│   ├── schemas.py           # Pydantic schemas for validation
+│   ├── database.py          # Database connection and session
+│   ├── models.py            # SQLAlchemy models
 │   ├── requirements.txt     # Python dependencies
 │   └── routers/
 │       ├── __init__.py
-│       ├── students.py      # Student endpoints
-│       └── courses.py       # Course endpoints
+│       ├── health_centers.py  # Health center endpoints
+│       └── diagnostics.py     # Diagnostic endpoints
 ├── .env.example             # Environment variables template
-└── README.md                # This file
+└── README.md               # This file
 ```
 
-## Database Models
+## Architecture
 
-### Student
-- Personal information (name, email)
-- Grade level and learning style preferences
-- Enrollment tracking
+This application follows a **Modular Monolith** architecture with clear separation of concerns:
 
-### Course
-- Course details (title, description, subject)
-- Difficulty level classification
-- Enrollment relationships
-
-### Enrollment
-- Links students to courses
-- Tracks progress and status
-- Enrollment date tracking
+- **Routers**: Handle HTTP requests and responses
+- **Models**: Define database schema using SQLAlchemy
+- **Database**: Manage database connections and sessions
+- **Config**: Centralized configuration management
 
 ## Environment Variables
 
-Key environment variables (see `.env.example`):
-
-- `DATABASE_URL`: Database connection string
-- `SECRET_KEY`: Secret key for security features
-- `ALLOWED_ORIGINS`: CORS allowed origins
-- `HOST`: Server host address
-- `PORT`: Server port number
-
-## Development
-
-### Adding New Features
-
-1. Create new models in `backend/models.py`
-2. Define schemas in `backend/schemas.py`
-3. Create router files in `backend/routers/`
-4. Register routers in `backend/main.py`
-
-### Database Migrations
-
-The application automatically creates database tables on startup. For production environments, consider using Alembic for database migrations.
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | PostgreSQL connection string | Yes |
+| `SECRET_KEY` | Application secret key | Yes |
+| `JWT_SECRET_KEY` | JWT token secret key | Yes |
+| `JWT_ALGORITHM` | JWT algorithm (default: HS256) | No |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Token expiration time | No |
+| `ALLOWED_ORIGINS` | CORS allowed origins | No |
+| `DEBUG` | Enable debug mode | No |
 
 ## Security Features
 
-- Input validation using Pydantic
+- Environment-based configuration (no hardcoded secrets)
+- CORS middleware for cross-origin requests
+- Input validation using Pydantic models
 - SQL injection prevention through SQLAlchemy ORM
-- CORS configuration for cross-origin requests
-- Environment-based configuration
-- Proper error handling and logging
+- Prepared for JWT authentication implementation
 
-## Logging
+## Development Guidelines
 
-The application includes comprehensive logging:
-- Application startup/shutdown events
-- CRUD operation tracking
-- Error logging with stack traces
-- Request/response logging
+- Follow PEP 8 style guide for Python code
+- Use type hints for better code clarity
+- Add logging for important operations
+- Validate all user inputs
+- Handle errors gracefully with appropriate HTTP status codes
 
-## Support
+## Contributing
 
-For issues, questions, or contributions, please refer to the project documentation or contact the development team.
+When contributing to this project:
+
+1. Ensure all new endpoints include proper error handling
+2. Add logging for debugging purposes
+3. Update this README if adding new features
+4. Follow the existing code structure and patterns
 
 ## License
 
-[Add your license information here]
+[Specify your license here]
+
+## Support
+
+For issues, questions, or contributions, please contact the development team or open an issue in the project repository.
