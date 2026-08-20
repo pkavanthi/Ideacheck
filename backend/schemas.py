@@ -1,15 +1,13 @@
 from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, List
 from datetime import datetime
-from typing import Optional
 
 
-# Student Schemas
 class StudentBase(BaseModel):
-    first_name: str = Field(..., min_length=1, max_length=100)
-    last_name: str = Field(..., min_length=1, max_length=100)
+    name: str = Field(..., min_length=1, max_length=255)
     email: EmailStr
-    grade_level: Optional[str] = None
-    learning_style: Optional[str] = None
+    native_language: str = Field(..., min_length=2, max_length=50)
+    proficiency_level: str = Field(..., pattern="^(beginner|intermediate|advanced|native)$")
 
 
 class StudentCreate(StudentBase):
@@ -17,11 +15,10 @@ class StudentCreate(StudentBase):
 
 
 class StudentUpdate(BaseModel):
-    first_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    last_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
     email: Optional[EmailStr] = None
-    grade_level: Optional[str] = None
-    learning_style: Optional[str] = None
+    native_language: Optional[str] = Field(None, min_length=2, max_length=50)
+    proficiency_level: Optional[str] = Field(None, pattern="^(beginner|intermediate|advanced|native)$")
 
 
 class Student(StudentBase):
@@ -33,12 +30,11 @@ class Student(StudentBase):
         from_attributes = True
 
 
-# Course Schemas
 class CourseBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    subject: str = Field(..., min_length=1, max_length=100)
-    difficulty_level: Optional[str] = None
+    original_language: str = Field(..., min_length=2, max_length=50)
+    instructor_name: str = Field(..., min_length=1, max_length=255)
 
 
 class CourseCreate(CourseBase):
@@ -48,8 +44,8 @@ class CourseCreate(CourseBase):
 class CourseUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
-    subject: Optional[str] = Field(None, min_length=1, max_length=100)
-    difficulty_level: Optional[str] = None
+    original_language: Optional[str] = Field(None, min_length=2, max_length=50)
+    instructor_name: Optional[str] = Field(None, min_length=1, max_length=255)
 
 
 class Course(CourseBase):
@@ -61,10 +57,10 @@ class Course(CourseBase):
         from_attributes = True
 
 
-# Enrollment Schemas
 class EnrollmentBase(BaseModel):
     student_id: int
     course_id: int
+    status: str = Field(default="active", pattern="^(active|completed|dropped)$")
 
 
 class EnrollmentCreate(EnrollmentBase):
@@ -72,15 +68,14 @@ class EnrollmentCreate(EnrollmentBase):
 
 
 class EnrollmentUpdate(BaseModel):
-    progress: Optional[float] = Field(None, ge=0.0, le=100.0)
-    status: Optional[str] = None
+    status: Optional[str] = Field(None, pattern="^(active|completed|dropped)$")
+    grade: Optional[float] = Field(None, ge=0, le=100)
 
 
 class Enrollment(EnrollmentBase):
     id: int
     enrollment_date: datetime
-    progress: float
-    status: str
+    grade: Optional[float] = None
 
     class Config:
         from_attributes = True

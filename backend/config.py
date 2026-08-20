@@ -3,17 +3,22 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "Rural Healthcare Diagnostic Hub"
+    """Application configuration"""
+    
+    # Application
+    APP_NAME: str = "Language-Agnostic Education Platform"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     
-    DATABASE_URL: str
-    SECRET_KEY: str
+    # Database
+    DATABASE_URL: str = "sqlite:///./education_platform.db"
     
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    # CORS
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
     
-    JWT_SECRET_KEY: str
-    JWT_ALGORITHM: str = "HS256"
+    # Security
+    SECRET_KEY: str = "your-secret-key-here-change-in-production"
+    ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     class Config:

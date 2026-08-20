@@ -4,33 +4,30 @@ from typing import List
 import logging
 
 from backend.database import get_db
-from backend import models, schemas
-
-logger = logging.getLogger(__name__)
+from backend.models import Student
+from backend.schemas import Student as StudentSchema, StudentCreate, StudentUpdate
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
-@router.post("/", response_model=schemas.Student, status_code=status.HTTP_201_CREATED)
-def create_student(student: schemas.StudentCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=StudentSchema, status_code=status.HTTP_201_CREATED)
+def create_student(student: StudentCreate, db: Session = Depends(get_db)):
     """Create a new student"""
     try:
-        # Check if email already exists
-        existing_student = db.query(models.Student).filter(
-            models.Student.email == student.email
-        ).first()
-        if existing_student:
+        db_student = db.query(Student).filter(Student.email == student.email).first()
+        if db_student:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
             )
         
-        db_student = models.Student(**student.model_dump())
-        db.add(db_student)
+        new_student = Student(**student.model_dump())
+        db.add(new_student)
         db.commit()
-        db.refresh(db_student)
-        logger.info(f"Created student with ID: {db_student.id}")
-        return db_student
+        db.refresh(new_student)
+        logger.info(f"Created student: {new_student.id}")
+        return new_student
     except HTTPException:
         raise
     except Exception as e:
@@ -42,11 +39,11 @@ def create_student(student: schemas.StudentCreate, db: Session = Depends(get_db)
         )
 
 
-@router.get("/", response_model=List[schemas.Student])
+@router.get("/", response_model=List[StudentSchema])
 def get_students(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Get all students with pagination"""
     try:
-        students = db.query(models.Student).offset(skip).limit(limit).all()
+        students = db.query(Student).offset(skip).limit(limit).all()
         return students
     except Exception as e:
         logger.error(f"Error fetching students: {str(e)}")
@@ -56,11 +53,11 @@ def get_students(skip: int = 0, limit: int = 100, db: Session = Depends(get_db))
         )
 
 
-@router.get("/{student_id}", response_model=schemas.Student)
+@router.get("/{student_id}", response_model=StudentSchema)
 def get_student(student_id: int, db: Session = Depends(get_db)):
     """Get a specific student by ID"""
     try:
-        student = db.query(models.Student).filter(models.Student.id == student_id).first()
+        student = db.query(Student).filter(Student.id == student_id).first()
         if not student:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -77,25 +74,23 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
         )
 
 
-@router.put("/{student_id}", response_model=schemas.Student)
-def update_student(
-    student_id: int,
-    student_update: schemas.StudentUpdate,
-    db: Session = Depends(get_db)
-):
+@router.put("/{student_id}", response_model=StudentSchema)
+def update_student(student_id: int, student_update: StudentUpdate, db: Session = Depends(get_db)):
     """Update a student"""
     try:
-        db_student = db.query(models.Student).filter(models.Student.id == student_id).first()
+        db_student = db.query(Student).filter(Student.id == student_id).first()
         if not db_student:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Student not found"
             )
         
-        # Check email uniqueness if email is being updated
-        if student_update.email and student_update.email != db_student.email:
-            existing = db.query(models.Student).filter(
-                models.Student.email == student_update.email
+        update_data = student_update.model_dump(exclude_unset=True)
+        
+        if "email" in update_data:
+            existing = db.query(Student).filter(
+                Student.email == update_data["email"],
+                Student.id != student_id
             ).first()
             if existing:
                 raise HTTPException(
@@ -103,13 +98,12 @@ def update_student(
                     detail="Email already registered"
                 )
         
-        update_data = student_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_student, field, value)
         
         db.commit()
         db.refresh(db_student)
-        logger.info(f"Updated student with ID: {student_id}")
+        logger.info(f"Updated student: {student_id}")
         return db_student
     except HTTPException:
         raise
@@ -126,7 +120,7 @@ def update_student(
 def delete_student(student_id: int, db: Session = Depends(get_db)):
     """Delete a student"""
     try:
-        db_student = db.query(models.Student).filter(models.Student.id == student_id).first()
+        db_student = db.query(Student).filter(Student.id == student_id).first()
         if not db_student:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -135,7 +129,7 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
         
         db.delete(db_student)
         db.commit()
-        logger.info(f"Deleted student with ID: {student_id}")
+        logger.info(f"Deleted student: {student_id}")
         return None
     except HTTPException:
         raise

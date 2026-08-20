@@ -4,23 +4,23 @@ from typing import List
 import logging
 
 from backend.database import get_db
-from backend import models, schemas
-
-logger = logging.getLogger(__name__)
+from backend.models import Course
+from backend.schemas import Course as CourseSchema, CourseCreate, CourseUpdate
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
-@router.post("/", response_model=schemas.Course, status_code=status.HTTP_201_CREATED)
-def create_course(course: schemas.CourseCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=CourseSchema, status_code=status.HTTP_201_CREATED)
+def create_course(course: CourseCreate, db: Session = Depends(get_db)):
     """Create a new course"""
     try:
-        db_course = models.Course(**course.model_dump())
-        db.add(db_course)
+        new_course = Course(**course.model_dump())
+        db.add(new_course)
         db.commit()
-        db.refresh(db_course)
-        logger.info(f"Created course with ID: {db_course.id}")
-        return db_course
+        db.refresh(new_course)
+        logger.info(f"Created course: {new_course.id}")
+        return new_course
     except Exception as e:
         logger.error(f"Error creating course: {str(e)}")
         db.rollback()
@@ -30,11 +30,11 @@ def create_course(course: schemas.CourseCreate, db: Session = Depends(get_db)):
         )
 
 
-@router.get("/", response_model=List[schemas.Course])
+@router.get("/", response_model=List[CourseSchema])
 def get_courses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Get all courses with pagination"""
     try:
-        courses = db.query(models.Course).offset(skip).limit(limit).all()
+        courses = db.query(Course).offset(skip).limit(limit).all()
         return courses
     except Exception as e:
         logger.error(f"Error fetching courses: {str(e)}")
@@ -44,11 +44,11 @@ def get_courses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
         )
 
 
-@router.get("/{course_id}", response_model=schemas.Course)
+@router.get("/{course_id}", response_model=CourseSchema)
 def get_course(course_id: int, db: Session = Depends(get_db)):
     """Get a specific course by ID"""
     try:
-        course = db.query(models.Course).filter(models.Course.id == course_id).first()
+        course = db.query(Course).filter(Course.id == course_id).first()
         if not course:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -65,15 +65,11 @@ def get_course(course_id: int, db: Session = Depends(get_db)):
         )
 
 
-@router.put("/{course_id}", response_model=schemas.Course)
-def update_course(
-    course_id: int,
-    course_update: schemas.CourseUpdate,
-    db: Session = Depends(get_db)
-):
+@router.put("/{course_id}", response_model=CourseSchema)
+def update_course(course_id: int, course_update: CourseUpdate, db: Session = Depends(get_db)):
     """Update a course"""
     try:
-        db_course = db.query(models.Course).filter(models.Course.id == course_id).first()
+        db_course = db.query(Course).filter(Course.id == course_id).first()
         if not db_course:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -86,7 +82,7 @@ def update_course(
         
         db.commit()
         db.refresh(db_course)
-        logger.info(f"Updated course with ID: {course_id}")
+        logger.info(f"Updated course: {course_id}")
         return db_course
     except HTTPException:
         raise
@@ -103,7 +99,7 @@ def update_course(
 def delete_course(course_id: int, db: Session = Depends(get_db)):
     """Delete a course"""
     try:
-        db_course = db.query(models.Course).filter(models.Course.id == course_id).first()
+        db_course = db.query(Course).filter(Course.id == course_id).first()
         if not db_course:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -112,7 +108,7 @@ def delete_course(course_id: int, db: Session = Depends(get_db)):
         
         db.delete(db_course)
         db.commit()
-        logger.info(f"Deleted course with ID: {course_id}")
+        logger.info(f"Deleted course: {course_id}")
         return None
     except HTTPException:
         raise
