@@ -1,27 +1,35 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
 from datetime import datetime
+from typing import Optional
+from backend.models import ConsultationStatus
 
 
-class StudentBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255)
+# Patient Schemas
+class PatientBase(BaseModel):
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
-    native_language: str = Field(..., min_length=2, max_length=50)
-    proficiency_level: str = Field(..., pattern="^(beginner|intermediate|advanced|native)$")
+    phone: str = Field(..., min_length=10, max_length=20)
+    date_of_birth: datetime
+    address: Optional[str] = None
+    medical_history: Optional[str] = None
 
 
-class StudentCreate(StudentBase):
+class PatientCreate(PatientBase):
     pass
 
 
-class StudentUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
+class PatientUpdate(BaseModel):
+    first_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    last_name: Optional[str] = Field(None, min_length=1, max_length=100)
     email: Optional[EmailStr] = None
-    native_language: Optional[str] = Field(None, min_length=2, max_length=50)
-    proficiency_level: Optional[str] = Field(None, pattern="^(beginner|intermediate|advanced|native)$")
+    phone: Optional[str] = Field(None, min_length=10, max_length=20)
+    date_of_birth: Optional[datetime] = None
+    address: Optional[str] = None
+    medical_history: Optional[str] = None
 
 
-class Student(StudentBase):
+class Patient(PatientBase):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -30,25 +38,30 @@ class Student(StudentBase):
         from_attributes = True
 
 
-class CourseBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
-    original_language: str = Field(..., min_length=2, max_length=50)
-    instructor_name: str = Field(..., min_length=1, max_length=255)
+# Health Worker Schemas
+class HealthWorkerBase(BaseModel):
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
+    email: EmailStr
+    phone: str = Field(..., min_length=10, max_length=20)
+    certification: Optional[str] = None
+    location: str = Field(..., min_length=1, max_length=255)
 
 
-class CourseCreate(CourseBase):
+class HealthWorkerCreate(HealthWorkerBase):
     pass
 
 
-class CourseUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = None
-    original_language: Optional[str] = Field(None, min_length=2, max_length=50)
-    instructor_name: Optional[str] = Field(None, min_length=1, max_length=255)
+class HealthWorkerUpdate(BaseModel):
+    first_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    last_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(None, min_length=10, max_length=20)
+    certification: Optional[str] = None
+    location: Optional[str] = Field(None, min_length=1, max_length=255)
 
 
-class Course(CourseBase):
+class HealthWorker(HealthWorkerBase):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -57,25 +70,35 @@ class Course(CourseBase):
         from_attributes = True
 
 
-class EnrollmentBase(BaseModel):
-    student_id: int
-    course_id: int
-    status: str = Field(default="active", pattern="^(active|completed|dropped)$")
+# Consultation Schemas
+class ConsultationBase(BaseModel):
+    patient_id: int
+    health_worker_id: int
+    scheduled_at: datetime
+    symptoms: Optional[str] = None
+    diagnosis: Optional[str] = None
+    treatment_plan: Optional[str] = None
+    notes: Optional[str] = None
 
 
-class EnrollmentCreate(EnrollmentBase):
+class ConsultationCreate(ConsultationBase):
     pass
 
 
-class EnrollmentUpdate(BaseModel):
-    status: Optional[str] = Field(None, pattern="^(active|completed|dropped)$")
-    grade: Optional[float] = Field(None, ge=0, le=100)
+class ConsultationUpdate(BaseModel):
+    scheduled_at: Optional[datetime] = None
+    status: Optional[ConsultationStatus] = None
+    symptoms: Optional[str] = None
+    diagnosis: Optional[str] = None
+    treatment_plan: Optional[str] = None
+    notes: Optional[str] = None
 
 
-class Enrollment(EnrollmentBase):
+class Consultation(ConsultationBase):
     id: int
-    enrollment_date: datetime
-    grade: Optional[float] = None
+    status: ConsultationStatus
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

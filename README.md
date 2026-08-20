@@ -1,31 +1,30 @@
-# Language-Agnostic Education Platform
+# Rural Healthcare Platform
 
-Transform education into a language-agnostic experience where learning potential, not language proficiency, determines academic success, making quality education accessible to students worldwide regardless of their native language.
+AI-augmented healthcare delivery platform for rural areas, transforming healthcare access through technology innovation combined with human expertise.
 
 ## Product Vision
 
-This platform enables international university students with varying language proficiencies to access quality education without language barriers. It supports professors teaching diverse classrooms and helps university administrators focus on international recruitment and educational equity.
+To become the leading healthcare delivery platform for rural areas globally, transforming healthcare access through AI-augmented care that combines technology innovation with human expertise.
 
 ## Target Audience
 
-- **International university students** with varying language proficiencies
-- **Professors** teaching diverse classrooms
-- **University administrators** focused on international recruitment and educational equity
+- **Rural Patients**: Seeking medical care in underserved areas
+- **Community Health Workers**: Providing frontline healthcare services
+- **Specialist Doctors**: Offering remote consultations to rural communities
 
 ## Core Features
 
-- Student management (CRUD operations)
-- Course management (CRUD operations)
-- Enrollment tracking
-- Language proficiency tracking
-- Multi-language support foundation
+- Patient management with comprehensive medical history tracking
+- Health worker registration and management
+- Consultation scheduling and management
+- CRUD operations for all core entities
 
 ## Technology Stack
 
-- **Backend Framework**: FastAPI (Python)
-- **Database**: SQLite (development) / PostgreSQL (production ready)
-- **ORM**: SQLAlchemy
-- **Validation**: Pydantic
+- **Backend Framework**: FastAPI 0.104.1
+- **Database**: SQLite (SQLAlchemy ORM)
+- **Data Validation**: Pydantic 2.5.0
+- **Server**: Uvicorn
 - **Architecture**: Modular Monolith
 
 ## Prerequisites
@@ -35,18 +34,15 @@ This platform enables international university students with varying language pr
 
 ## Installation
 
-1. **Clone the repository** (if applicable) or navigate to the project directory:
-   ```bash
-   cd /path/to/project
-   ```
+1. Clone the repository or navigate to the project directory
 
-2. **Create a virtual environment**:
-   ```bash
-   python -m venv venv
-   ```
+2. Create a virtual environment:
+```bash
+python -m venv venv
+```
 
-3. **Activate the virtual environment**:
-   - On macOS/Linux:
+3. Activate the virtual environment:
+   - On Linux/Mac:
      ```bash
      source venv/bin/activate
      ```
@@ -55,76 +51,62 @@ This platform enables international university students with varying language pr
      venv\Scripts\activate
      ```
 
-4. **Install dependencies**:
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
+4. Install dependencies:
+```bash
+pip install -r backend/requirements.txt
+```
 
-5. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` file and update the configuration values as needed.
+5. Set up environment variables:
+```bash
+cp .env.example .env
+```
+
+6. Edit `.env` file and update the `SECRET_KEY` with a secure random string:
+```bash
+# Generate a secure secret key
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
 
 ## Running the Application
 
-### Development Mode
-
-Run the application with auto-reload enabled:
-
+1. Start the FastAPI server:
 ```bash
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at: `http://localhost:8000`
-
-### API Documentation
-
-Once the application is running, access the interactive API documentation:
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+2. Access the application:
+   - API: http://localhost:8000
+   - Interactive API Documentation (Swagger): http://localhost:8000/docs
+   - Alternative API Documentation (ReDoc): http://localhost:8000/redoc
 
 ## API Endpoints
 
-### Students
-
-- `POST /api/v1/students` - Create a new student
-- `GET /api/v1/students` - Get all students (with pagination)
-- `GET /api/v1/students/{student_id}` - Get a specific student
-- `PUT /api/v1/students/{student_id}` - Update a student
-- `DELETE /api/v1/students/{student_id}` - Delete a student
-
-### Courses
-
-- `POST /api/v1/courses` - Create a new course
-- `GET /api/v1/courses` - Get all courses (with pagination)
-- `GET /api/v1/courses/{course_id}` - Get a specific course
-- `PUT /api/v1/courses/{course_id}` - Update a course
-- `DELETE /api/v1/courses/{course_id}` - Delete a course
-
 ### Health Check
+- `GET /` - Root endpoint with API information
+- `GET /health` - Health check endpoint
 
-- `GET /health` - Check application health status
+### Patients
+- `POST /api/v1/patients` - Create a new patient
+- `GET /api/v1/patients` - Get all patients (with pagination)
+- `GET /api/v1/patients/{patient_id}` - Get a specific patient
+- `PUT /api/v1/patients/{patient_id}` - Update a patient
+- `DELETE /api/v1/patients/{patient_id}` - Delete a patient
 
-## Database
+### Health Workers
+- `POST /api/v1/health-workers` - Create a new health worker
+- `GET /api/v1/health-workers` - Get all health workers (with pagination)
+- `GET /api/v1/health-workers/{worker_id}` - Get a specific health worker
+- `PUT /api/v1/health-workers/{worker_id}` - Update a health worker
+- `DELETE /api/v1/health-workers/{worker_id}` - Delete a health worker
 
-The application uses SQLite by default for development. The database file will be created automatically at `./education_platform.db` when you first run the application.
-
-### Database Models
-
-- **Student**: Stores student information including name, email, native language, and proficiency level
-- **Course**: Stores course information including title, description, original language, and instructor
-- **Enrollment**: Tracks student enrollments in courses with status and grades
-
-## Environment Variables
-
-Key environment variables (see `.env.example` for full list):
-
-- `DATABASE_URL`: Database connection string
-- `SECRET_KEY`: Secret key for security features
-- `CORS_ORIGINS`: Allowed CORS origins
-- `DEBUG`: Enable/disable debug mode
+### Consultations
+- `POST /api/v1/consultations` - Create a new consultation
+- `GET /api/v1/consultations` - Get all consultations (with pagination)
+- `GET /api/v1/consultations/{consultation_id}` - Get a specific consultation
+- `PUT /api/v1/consultations/{consultation_id}` - Update a consultation
+- `DELETE /api/v1/consultations/{consultation_id}` - Delete a consultation
+- `GET /api/v1/consultations/patient/{patient_id}` - Get all consultations for a patient
+- `GET /api/v1/consultations/health-worker/{worker_id}` - Get all consultations for a health worker
 
 ## Project Structure
 
@@ -132,59 +114,75 @@ Key environment variables (see `.env.example` for full list):
 .
 ├── backend/
 │   ├── __init__.py
-│   ├── main.py              # Application entry point
+│   ├── main.py              # FastAPI application entry point
 │   ├── config.py            # Configuration management
-│   ├── database.py          # Database setup
-│   ├── models.py            # SQLAlchemy models
-│   ├── schemas.py           # Pydantic schemas
-│   ├── requirements.txt     # Python dependencies
-│   └── routers/
+│   ├── database.py          # Database connection and session
+│   ├── models.py            # SQLAlchemy database models
+│   ├── schemas.py           # Pydantic schemas for validation
+│   └── routers/             # API route handlers
 │       ├── __init__.py
-│       ├── students.py      # Student endpoints
-│       └── courses.py       # Course endpoints
+│       ├── patients.py      # Patient endpoints
+│       ├── health_workers.py # Health worker endpoints
+│       └── consultations.py  # Consultation endpoints
 ├── .env.example             # Environment variables template
-└── README.md                # This file
+├── README.md                # This file
+└── requirements.txt         # Python dependencies
+
 ```
+
+## Database
+
+The application uses SQLite by default for simplicity. The database file (`healthcare.db`) will be created automatically in the project root when you first run the application.
+
+### Database Models
+
+- **Patient**: Stores patient information and medical history
+- **HealthWorker**: Stores health worker credentials and location
+- **Consultation**: Manages consultation scheduling and records
+
+## Development
+
+### Code Quality
+
+The codebase follows:
+- PEP 8 style guidelines
+- Type hints for better code clarity
+- Comprehensive error handling
+- Input validation using Pydantic
+- RESTful API design principles
+
+### Security Features
+
+- Environment-based configuration (no hardcoded secrets)
+- CORS middleware for cross-origin requests
+- Input validation and sanitization
+- SQL injection prevention through ORM
+- Proper HTTP status codes and error messages
 
 ## Architecture
 
 The application follows a **Modular Monolith** architecture with clear separation of concerns:
 
 - **Routers**: Handle HTTP requests and responses
-- **Models**: Define database schema using SQLAlchemy
-- **Schemas**: Validate request/response data using Pydantic
+- **Models**: Define database schema and relationships
+- **Schemas**: Validate input/output data
 - **Database**: Manage database connections and sessions
-- **Config**: Centralize application configuration
-
-## Development Guidelines
-
-- Follow PEP 8 style guide for Python code
-- Use type hints for better code clarity
-- Add logging for important operations
-- Validate all user inputs using Pydantic schemas
-- Handle errors gracefully with appropriate HTTP status codes
-- Keep functions focused and single-purpose
-
-## Security Features
-
-- Input validation using Pydantic
-- SQL injection prevention through SQLAlchemy ORM
-- CORS configuration for API security
-- Environment-based configuration (no hardcoded secrets)
+- **Config**: Centralize configuration management
 
 ## Future Enhancements
 
-- Authentication and authorization (JWT)
-- Real-time translation services integration
-- Advanced analytics and reporting
+- Authentication and authorization (JWT tokens)
+- AI-powered symptom analysis
+- Real-time video consultations
 - Mobile application support
-- Notification system
-- File upload for course materials
-
-## Support
-
-For issues, questions, or contributions, please refer to the project documentation or contact the development team.
+- Advanced analytics and reporting
+- Multi-language support
+- SMS/WhatsApp notifications
 
 ## License
 
-[Specify your license here]
+Proprietary - All rights reserved
+
+## Support
+
+For support and questions, please contact the development team.

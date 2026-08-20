@@ -15,7 +15,6 @@ Base = declarative_base()
 
 
 def get_db():
-    """Database dependency for FastAPI"""
     db = SessionLocal()
     try:
         yield db

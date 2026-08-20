@@ -3,23 +3,24 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    """Application configuration"""
-    
     # Application
-    APP_NAME: str = "Language-Agnostic Education Platform"
+    APP_NAME: str = "Rural Healthcare Platform"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     
     # Database
-    DATABASE_URL: str = "sqlite:///./education_platform.db"
-    
-    # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    DATABASE_URL: str = "sqlite:///./healthcare.db"
     
     # Security
-    SECRET_KEY: str = "your-secret-key-here-change-in-production"
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # CORS
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    
+    # API
+    API_V1_PREFIX: str = "/api/v1"
     
     class Config:
         env_file = ".env"
