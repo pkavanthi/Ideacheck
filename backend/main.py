@@ -4,31 +4,36 @@ from contextlib import asynccontextmanager
 import logging
 
 from backend.config import settings
-from backend.routers import patients
 from backend.database import engine, Base
+from backend.routers import exercises, workouts, users
 
-logging.basicConfig(level=logging.INFO)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize database tables on startup"""
-    logger.info("Creating database tables...")
+    """Application lifespan events"""
+    logger.info("Starting application...")
+    # Create database tables
     Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
+    logger.info("Database tables created")
     yield
-    logger.info("Application shutdown")
+    logger.info("Shutting down application...")
 
 
 app = FastAPI(
-    title="Rural Healthcare API",
-    description="AI-powered telemedicine platform for rural healthcare",
+    title="AI Fitness Coach API",
+    description="Professional movement coaching through AI technology",
     version="1.0.0",
     lifespan=lifespan
 )
 
-# CORS configuration
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -38,24 +43,22 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(patients.router, prefix="/api/v1", tags=["patients"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(exercises.router, prefix="/api/v1/exercises", tags=["exercises"])
+app.include_router(workouts.router, prefix="/api/v1/workouts", tags=["workouts"])
 
 
 @app.get("/")
 async def root():
-    """Health check endpoint"""
+    """Root endpoint"""
     return {
-        "status": "healthy",
-        "service": "Rural Healthcare API",
-        "version": "1.0.0"
+        "message": "AI Fitness Coach API",
+        "version": "1.0.0",
+        "status": "operational"
     }
 
 
 @app.get("/health")
 async def health_check():
-    """Detailed health check"""
-    return {
-        "status": "healthy",
-        "database": "connected",
-        "api": "operational"
-    }
+    """Health check endpoint"""
+    return {"status": "healthy"}

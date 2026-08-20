@@ -1,30 +1,31 @@
-# Rural Healthcare API
+# AI Fitness Coach API
 
-An AI-powered telemedicine platform designed to eliminate geographic barriers in rural healthcare, ensuring every rural patient receives quality medical care comparable to urban hospitals.
+Transform global fitness culture from quantity-focused to quality-focused training by making professional movement coaching universally accessible through AI technology.
 
 ## Product Vision
 
-To create an interconnected rural healthcare ecosystem where AI and telemedicine eliminate geographic barriers, ensuring every rural patient receives quality medical care comparable to urban hospitals regardless of location.
+Professional movement coaching for home fitness enthusiasts, physical therapy patients, remote fitness professionals, and workplace wellness programs.
 
 ## Target Audience
 
-- **Rural Health Workers**: Frontline care providers in remote areas
-- **Rural Patients**: Individuals in remote villages lacking specialist access
-- **Remote Doctors**: Medical professionals offering telemedicine consultations to underserved communities
+- Home fitness enthusiasts aged 25-55
+- Physical therapy patients requiring guided exercise
+- Remote fitness professionals monitoring clients
+- Workplace wellness programs focused on ergonomics
 
 ## Core Features
 
-- **Patient Management**: Complete CRUD operations for patient records
-- **Medical History Tracking**: Comprehensive patient medical history, allergies, and current medications
-- **Emergency Contact Management**: Store and manage emergency contact information
-- **Village/District Tracking**: Geographic organization for rural healthcare delivery
+- User management with fitness profiles
+- Exercise library with detailed instructions
+- Workout planning and tracking
+- CRUD operations for users, exercises, and workouts
 
 ## Technology Stack
 
 - **Backend Framework**: FastAPI (Python)
-- **Database**: SQLAlchemy ORM with SQLite (development) / PostgreSQL (production)
-- **Data Validation**: Pydantic
-- **Architecture**: Modular Monolith with clear separation of concerns
+- **Database**: SQLite (SQLAlchemy ORM)
+- **Authentication**: JWT with bcrypt password hashing
+- **Architecture**: Modular Monolith
 
 ## Prerequisites
 
@@ -33,177 +34,135 @@ To create an interconnected rural healthcare ecosystem where AI and telemedicine
 
 ## Installation
 
-1. **Clone the repository** (if applicable) or navigate to the project directory:
-   ```bash
-   cd /path/to/project
-   ```
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd <project-directory>
+```
 
-2. **Create a virtual environment**:
-   ```bash
-   python -m venv venv
-   ```
+2. Create a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-3. **Activate the virtual environment**:
-   - On Linux/Mac:
-     ```bash
-     source venv/bin/activate
-     ```
-   - On Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
+3. Install dependencies:
+```bash
+pip install -r backend/requirements.txt
+```
 
-4. **Install dependencies**:
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
+4. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env and set your SECRET_KEY
+```
 
-5. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` file with your configuration if needed.
+## Running Locally
 
-## Running the Application
+1. Activate virtual environment (if not already activated):
+```bash
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-### Development Mode
-
-Run the FastAPI application with auto-reload:
-
+2. Start the development server:
 ```bash
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at:
-- **API Base URL**: http://localhost:8000
-- **Interactive API Documentation (Swagger)**: http://localhost:8000/docs
-- **Alternative API Documentation (ReDoc)**: http://localhost:8000/redoc
-
-### Production Mode
-
-For production deployment:
-
-```bash
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
-```
+3. Access the API:
+- API: http://localhost:8000
+- Interactive API docs: http://localhost:8000/docs
+- Alternative API docs: http://localhost:8000/redoc
 
 ## API Endpoints
 
-### Health Check
-- `GET /` - Root health check
-- `GET /health` - Detailed health status
+### Users
+- `POST /api/v1/users/` - Create a new user
+- `GET /api/v1/users/` - Get all users
+- `GET /api/v1/users/{user_id}` - Get user by ID
+- `PUT /api/v1/users/{user_id}` - Update user
+- `DELETE /api/v1/users/{user_id}` - Delete user (soft delete)
 
-### Patient Management
-- `POST /api/v1/patients` - Create a new patient
-- `GET /api/v1/patients` - List all patients (with pagination)
-- `GET /api/v1/patients/{patient_id}` - Get specific patient details
-- `PUT /api/v1/patients/{patient_id}` - Update patient information
-- `DELETE /api/v1/patients/{patient_id}` - Soft delete patient (deactivate)
+### Exercises
+- `POST /api/v1/exercises/` - Create a new exercise
+- `GET /api/v1/exercises/` - Get all exercises (with filters)
+- `GET /api/v1/exercises/{exercise_id}` - Get exercise by ID
+- `PUT /api/v1/exercises/{exercise_id}` - Update exercise
+- `DELETE /api/v1/exercises/{exercise_id}` - Delete exercise (soft delete)
 
-### Query Parameters
-- `skip`: Number of records to skip (pagination)
-- `limit`: Maximum number of records to return (default: 100)
-- `active_only`: Filter for active patients only (default: true)
+### Workouts
+- `POST /api/v1/workouts/` - Create a new workout
+- `GET /api/v1/workouts/` - Get all workouts (with filters)
+- `GET /api/v1/workouts/{workout_id}` - Get workout by ID
+- `PUT /api/v1/workouts/{workout_id}` - Update workout
+- `DELETE /api/v1/workouts/{workout_id}` - Delete workout
 
-## Project Structure
+## Environment Variables
 
-```
-.
-├── backend/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI application entry point
-│   ├── config.py            # Configuration management
-│   ├── database.py          # Database connection and session
-│   ├── models.py            # SQLAlchemy database models
-│   ├── schemas.py           # Pydantic schemas for validation
-│   └── routers/
-│       ├── __init__.py
-│       └── patients.py      # Patient CRUD endpoints
-├── .env.example             # Environment variables template
-├── README.md                # This file
-└── requirements.txt         # Python dependencies
-```
+Required environment variables (see `.env.example`):
+
+- `SECRET_KEY` - Secret key for JWT token generation (REQUIRED)
+- `DATABASE_URL` - Database connection string (default: SQLite)
+- `ALGORITHM` - JWT algorithm (default: HS256)
+- `ACCESS_TOKEN_EXPIRE_MINUTES` - Token expiration time (default: 30)
+- `ALLOWED_ORIGINS` - CORS allowed origins
 
 ## Database Schema
 
-### Patient Model
-- **id**: Primary key
-- **first_name**: Patient's first name
-- **last_name**: Patient's last name
-- **date_of_birth**: Date of birth
-- **gender**: Gender
-- **phone_number**: Contact phone number
-- **email**: Email address (optional)
-- **address**: Physical address
-- **village**: Village name
-- **district**: District name
-- **medical_history**: Medical history notes
-- **allergies**: Known allergies
-- **current_medications**: Current medications
-- **emergency_contact_name**: Emergency contact person
-- **emergency_contact_phone**: Emergency contact phone
-- **is_active**: Active status (soft delete flag)
-- **created_at**: Record creation timestamp
-- **updated_at**: Last update timestamp
+### Users
+- User profiles with fitness levels
+- Password hashing with bcrypt
+- Soft delete support
 
-## Configuration
+### Exercises
+- Exercise library with categories
+- Difficulty levels and muscle groups
+- Equipment requirements
+- Video instructions support
 
-Key configuration options in `.env`:
+### Workouts
+- User-specific workout plans
+- Exercise associations with sets/reps
+- Completion tracking
+- Scheduled and completed dates
 
-- `DATABASE_URL`: Database connection string
-- `ALLOWED_ORIGINS`: CORS allowed origins
-- `DEBUG`: Debug mode (true/false)
-- `APP_NAME`: Application name
-- `APP_VERSION`: Application version
+## Architecture
+
+**Modular Monolith** with clear separation:
+- `backend/main.py` - Application entry point
+- `backend/config.py` - Configuration management
+- `backend/database.py` - Database setup
+- `backend/models.py` - SQLAlchemy models
+- `backend/routers/` - API route handlers
+
+## Security Features
+
+- Password hashing with bcrypt
+- JWT token-based authentication
+- Input validation with Pydantic
+- SQL injection prevention via SQLAlchemy ORM
+- CORS configuration
+- Environment-based secrets management
 
 ## Development
 
-### Adding New Features
+The application uses:
+- FastAPI for high-performance async API
+- SQLAlchemy for database ORM
+- Pydantic for data validation
+- Passlib for secure password hashing
 
-1. Create new models in `backend/models.py`
-2. Create corresponding schemas in `backend/schemas.py`
-3. Create router files in `backend/routers/`
-4. Register routers in `backend/main.py`
+## Success Metrics
 
-### Database Migrations
-
-For production use, consider implementing Alembic for database migrations:
-
-```bash
-pip install alembic
-alembic init alembic
-```
-
-## Security Considerations
-
-- Input validation using Pydantic schemas
-- SQL injection prevention through SQLAlchemy ORM
-- CORS configuration for API security
-- Environment variables for sensitive configuration
-- Soft delete for data retention
-
-## Error Handling
-
-The API implements comprehensive error handling:
-- 404: Resource not found
-- 500: Internal server error
-- Detailed error messages in responses
-- Logging for debugging and monitoring
-
-## Future Enhancements
-
-- Authentication and authorization (JWT)
-- Telemedicine consultation scheduling
-- AI-powered diagnosis assistance
-- Medical image storage and analysis
-- Real-time chat for consultations
-- Mobile application integration
-- Multi-language support
-
-## Support
-
-For issues, questions, or contributions, please refer to the project documentation or contact the development team.
+- User registration and profile management
+- Exercise library creation and management
+- Workout planning and tracking
+- Quality-focused movement coaching accessibility
 
 ## License
 
-[Specify your license here]
+[Your License Here]
+
+## Support
+
+For issues and questions, please open an issue in the repository.
