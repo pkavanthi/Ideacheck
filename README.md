@@ -1,30 +1,23 @@
-# Educational Translation Platform
+# EduTranslate - Educational Platform with Language Translation
 
-Transform global education into a truly borderless experience where every student can learn in their native language while maintaining technical accuracy, making knowledge universally accessible regardless of linguistic origin.
+Transform education into a borderless, inclusive experience where language becomes an asset rather than a barrier, enabling world-class instruction to reach every student regardless of linguistic background.
 
 ## Product Vision
 
-This platform enables international university students with diverse language backgrounds to access educational content in their native languages. It supports professors teaching multilingual classrooms and helps university administrators improve educational accessibility and institutional reputation.
-
-## Target Audience
-
-- **International university students** with diverse language backgrounds
-- **Professors** teaching multilingual classrooms
-- **University administrators** seeking to improve educational accessibility
+EduTranslate is designed for international university students with varying language proficiencies, professors teaching diverse classrooms, and university administrators seeking to enhance global competitiveness and student success.
 
 ## Core Features
 
-- **CRUD Operations for Translations**: Create, read, update, and delete translation entries
-- **Multi-language Support**: Handle translations between various language pairs
-- **RESTful API**: Clean API endpoints for integration with educational platforms
+- **Course Management**: Create, read, update, and delete courses with multilingual support
+- **Course Materials**: Manage educational materials (lectures, assignments, readings) for each course
+- **Translation System**: Translate courses and materials into multiple languages to support diverse student populations
 
 ## Technology Stack
 
 - **Backend Framework**: FastAPI (Python)
-- **Database**: SQLite (easily upgradeable to PostgreSQL)
-- **ORM**: SQLAlchemy
-- **Data Validation**: Pydantic
-- **Architecture**: Modular Monolith
+- **Database**: SQLAlchemy ORM with SQLite (easily switchable to PostgreSQL/MySQL)
+- **API Style**: RESTful API
+- **Architecture**: Modular Monolith with clear separation of concerns
 
 ## Prerequisites
 
@@ -33,98 +26,80 @@ This platform enables international university students with diverse language ba
 
 ## Installation
 
-1. **Clone the repository** (or navigate to the project directory)
+1. **Clone or navigate to the project directory**
 
-2. **Create a virtual environment**:
+2. **Create a virtual environment**
 ```bash
 python -m venv venv
 ```
 
-3. **Activate the virtual environment**:
-   - On Linux/Mac:
-     ```bash
-     source venv/bin/activate
-     ```
-   - On Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
+3. **Activate the virtual environment**
 
-4. **Install dependencies**:
+On Linux/Mac:
+```bash
+source venv/bin/activate
+```
+
+On Windows:
+```bash
+venv\Scripts\activate
+```
+
+4. **Install dependencies**
 ```bash
 pip install -r backend/requirements.txt
 ```
 
-5. **Set up environment variables**:
+5. **Set up environment variables**
 ```bash
 cp .env.example .env
 ```
-Edit `.env` file with your configuration values.
+
+Edit `.env` file and update the configuration values as needed, especially:
+- `SECRET_KEY`: Use a strong random string for production
+- `DATABASE_URL`: Update if using PostgreSQL or MySQL instead of SQLite
 
 ## Running the Application
 
-### Development Mode
+1. **Initialize the database** (first time only)
+```bash
+python -c "from backend.database import init_db; init_db()"
+```
 
-Run the FastAPI application with auto-reload:
-
+2. **Start the development server**
 ```bash
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at:
-- **API Base URL**: http://localhost:8000
-- **Interactive API Documentation (Swagger)**: http://localhost:8000/docs
-- **Alternative API Documentation (ReDoc)**: http://localhost:8000/redoc
+The API will be available at: `http://localhost:8000`
+
+3. **Access the API documentation**
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
 
 ## API Endpoints
 
-### Health Check
-- `GET /` - Root endpoint with API information
-- `GET /health` - Health check endpoint
+### Courses
+
+- `POST /api/v1/courses` - Create a new course
+- `GET /api/v1/courses` - List all courses (supports filtering by language)
+- `GET /api/v1/courses/{course_id}` - Get a specific course
+- `PUT /api/v1/courses/{course_id}` - Update a course
+- `DELETE /api/v1/courses/{course_id}` - Delete a course
+
+### Course Materials
+
+- `POST /api/v1/courses/{course_id}/materials` - Create course material
+- `GET /api/v1/courses/{course_id}/materials` - List materials for a course
 
 ### Translations
-- `POST /api/v1/translations/` - Create a new translation
-- `GET /api/v1/translations/` - Get all translations (with pagination)
-- `GET /api/v1/translations/{translation_id}` - Get a specific translation
-- `PUT /api/v1/translations/{translation_id}` - Update a translation
-- `DELETE /api/v1/translations/{translation_id}` - Delete a translation
 
-### Example API Usage
-
-**Create a translation**:
-```bash
-curl -X POST "http://localhost:8000/api/v1/translations/" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "source_text": "Hello, world!",
-    "source_language": "en",
-    "target_language": "es"
-  }'
-```
-
-**Get all translations**:
-```bash
-curl -X GET "http://localhost:8000/api/v1/translations/"
-```
-
-**Get a specific translation**:
-```bash
-curl -X GET "http://localhost:8000/api/v1/translations/1"
-```
-
-**Update a translation**:
-```bash
-curl -X PUT "http://localhost:8000/api/v1/translations/1" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "translated_text": "¡Hola, mundo!"
-  }'
-```
-
-**Delete a translation**:
-```bash
-curl -X DELETE "http://localhost:8000/api/v1/translations/1"
-```
+- `POST /api/v1/translations/courses/{course_id}` - Create course translation
+- `GET /api/v1/translations/courses/{course_id}` - List all translations for a course
+- `GET /api/v1/translations/courses/{course_id}/{language}` - Get specific translation
+- `DELETE /api/v1/translations/courses/{course_id}/{language}` - Delete translation
+- `POST /api/v1/translations/materials/{material_id}` - Create material translation
+- `GET /api/v1/translations/materials/{material_id}` - List material translations
 
 ## Project Structure
 
@@ -134,66 +109,96 @@ curl -X DELETE "http://localhost:8000/api/v1/translations/1"
 │   ├── __init__.py
 │   ├── main.py              # FastAPI application entry point
 │   ├── config.py            # Configuration management
-│   ├── database.py          # Database connection and session
+│   ├── database.py          # Database connection and session management
 │   ├── models.py            # SQLAlchemy database models
-│   ├── schemas.py           # Pydantic schemas for validation
-│   ├── requirements.txt     # Python dependencies
-│   └── routers/
+│   └── routers/             # API route handlers
 │       ├── __init__.py
-│       └── translations.py  # Translation API endpoints
+│       ├── courses.py       # Course and material endpoints
+│       └── translations.py  # Translation endpoints
 ├── .env.example             # Environment variables template
-└── README.md                # This file
+├── README.md                # This file
+└── requirements.txt         # Python dependencies
 ```
 
-## Architecture Overview
+## Database Schema
 
-This application follows a **Modular Monolith** architecture with clear separation of concerns:
+### Tables
 
-- **Routers**: Handle HTTP requests and responses
-- **Models**: Define database schema using SQLAlchemy ORM
-- **Schemas**: Validate request/response data using Pydantic
-- **Database**: Manage database connections and sessions
-- **Config**: Centralize configuration management
+1. **courses**: Main course information
+   - id, title, description, language, instructor_name, created_at, updated_at, is_active
 
-## Environment Variables
+2. **course_translations**: Translated course content
+   - id, course_id, target_language, translated_title, translated_description, created_at
 
-Key environment variables (see `.env.example` for full list):
+3. **course_materials**: Educational materials for courses
+   - id, course_id, title, content, material_type, language, created_at, updated_at
 
-- `DATABASE_URL`: Database connection string
-- `SECRET_KEY`: Secret key for security features
-- `CORS_ORIGINS`: Allowed CORS origins
-- `DEBUG`: Enable/disable debug mode
+4. **material_translations**: Translated material content
+   - id, material_id, target_language, translated_title, translated_content, created_at
 
-## Database
+## Example Usage
 
-The application uses SQLite by default for easy setup. The database file (`translations.db`) will be created automatically on first run.
-
-To use PostgreSQL in production, update the `DATABASE_URL` in your `.env` file:
+### Create a Course
+```bash
+curl -X POST "http://localhost:8000/api/v1/courses" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Introduction to Computer Science",
+    "description": "Learn the fundamentals of programming",
+    "language": "en",
+    "instructor_name": "Dr. Smith"
+  }'
 ```
-DATABASE_URL=postgresql://user:password@localhost/dbname
+
+### Create a Translation
+```bash
+curl -X POST "http://localhost:8000/api/v1/translations/courses/1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target_language": "es",
+    "translated_title": "Introducción a las Ciencias de la Computación",
+    "translated_description": "Aprende los fundamentos de la programación"
+  }'
 ```
 
-## Security Features
+## Development
 
-- **Input Validation**: All inputs validated using Pydantic schemas
-- **CORS Configuration**: Configurable CORS origins
-- **Error Handling**: Comprehensive error handling with appropriate HTTP status codes
-- **Logging**: Application-wide logging for monitoring and debugging
+### Code Quality
+- Follow PEP 8 style guidelines
+- Use type hints for better code clarity
+- Add docstrings to functions and classes
 
-## Future Enhancements
+### Adding New Features
+1. Create new models in `backend/models.py` if needed
+2. Add new routes in `backend/routers/`
+3. Update this README with new endpoints
 
-- Integration with translation APIs (Google Translate, DeepL, etc.)
-- User authentication and authorization
-- Translation history and versioning
-- Batch translation support
-- Real-time translation updates via WebSockets
-- Advanced search and filtering capabilities
-- Analytics and usage metrics
+## Production Deployment
 
-## Contributing
+For production deployment:
 
-This is an MVP (Minimum Viable Product) focused on core CRUD operations. Contributions are welcome to enhance functionality and add new features.
+1. **Use a production-grade database** (PostgreSQL recommended)
+   - Update `DATABASE_URL` in `.env`
+
+2. **Set strong security values**
+   - Generate a strong `SECRET_KEY`
+   - Set `DEBUG=False`
+
+3. **Use a production ASGI server**
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+4. **Consider using Docker** for containerized deployment
+
+5. **Set up proper CORS origins** for your frontend domain
+
+## Target Audience
+
+- **International Students**: Access course content in their preferred language
+- **Professors**: Reach diverse classrooms with multilingual content
+- **University Administrators**: Enhance global competitiveness and student success
 
 ## License
 
-[Specify your license here]
+This project is part of an educational platform initiative.

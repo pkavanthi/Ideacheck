@@ -4,11 +4,11 @@ from typing import List
 
 class Settings(BaseSettings):
     # Application
-    APP_NAME: str = "Educational Translation Platform"
+    APP_NAME: str = "EduTranslate"
     DEBUG: bool = False
     
     # Database
-    DATABASE_URL: str = "sqlite:///./translations.db"
+    DATABASE_URL: str = "sqlite:///./edutranslate.db"
     
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # API Keys (for translation services if needed)
+    TRANSLATION_API_KEY: str = ""
     
     class Config:
         env_file = ".env"
