@@ -1,56 +1,30 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from pydantic import BaseModel, EmailStr
-from datetime import datetime
+import logging
 
 from backend.database import get_db
 from backend.models import User
-from backend.auth import get_password_hash
+from backend.schemas import UserCreate, UserResponse, UserUpdate
+from backend.utils.security import get_password_hash
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-# Pydantic schemas
-class UserBase(BaseModel):
-    email: EmailStr
-    username: str
-    full_name: str | None = None
-
-
-class UserCreate(UserBase):
-    password: str
-
-
-class UserUpdate(BaseModel):
-    email: EmailStr | None = None
-    username: str | None = None
-    full_name: str | None = None
-    is_active: bool | None = None
-
-
-class UserResponse(UserBase):
-    id: int
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     """Create a new user"""
     # Check if user already exists
-    db_user = db.query(User).filter(
+    existing_user = db.query(User).filter(
         (User.email == user.email) | (User.username == user.username)
     ).first()
     
-    if db_user:
+    if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email or username already registered"
+            detail="User with this email or username already exists"
         )
     
     # Create new user
@@ -66,6 +40,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     
+    logger.info(f"User created: {db_user.username}")
     return db_user
 
 
@@ -93,38 +68,43 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 @router.put("/{user_id}", response_model=UserResponse)
 def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
     """Update a user"""
-    db_user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     
-    if not db_user:
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
     
-    # Update fields if provided
+    # Update fields
     update_data = user_update.model_dump(exclude_unset=True)
+    
+    if "password" in update_data:
+        update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
+    
     for field, value in update_data.items():
-        setattr(db_user, field, value)
+        setattr(user, field, value)
     
-    db_user.updated_at = datetime.utcnow()
     db.commit()
-    db.refresh(db_user)
+    db.refresh(user)
     
-    return db_user
+    logger.info(f"User updated: {user.username}")
+    return user
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(get_db)):
     """Delete a user"""
-    db_user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     
-    if not db_user:
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
     
-    db.delete(db_user)
+    db.delete(user)
     db.commit()
     
+    logger.info(f"User deleted: {user.username}")
     return None

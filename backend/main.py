@@ -5,7 +5,7 @@ import logging
 
 from backend.config import settings
 from backend.database import engine, Base
-from backend.routers import exercises, workouts, users
+from backend.routers import exercises, users
 
 # Configure logging
 logging.basicConfig(
@@ -19,22 +19,22 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    logger.info("Creating database tables...")
+    logger.info("Starting Movement Health Platform API")
     Base.metadata.create_all(bind=engine)
-    logger.info("Application startup complete")
+    logger.info("Database tables created")
     yield
     # Shutdown
-    logger.info("Application shutdown")
+    logger.info("Shutting down Movement Health Platform API")
 
 
 app = FastAPI(
-    title="Smart Fitness Studio API",
-    description="API for movement quality tracking and exercise form analysis",
+    title="Movement Health Platform API",
+    description="API for exercise form tracking and movement optimization",
     version="1.0.0",
     lifespan=lifespan
 )
 
-# CORS configuration
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -44,16 +44,15 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(exercises.router, prefix="/api/v1/exercises", tags=["exercises"])
-app.include_router(workouts.router, prefix="/api/v1/workouts", tags=["workouts"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 
 
 @app.get("/")
 async def root():
     """Root endpoint"""
     return {
-        "message": "Smart Fitness Studio API",
+        "message": "Movement Health Platform API",
         "version": "1.0.0",
         "status": "operational"
     }

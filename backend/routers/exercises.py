@@ -1,59 +1,39 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from pydantic import BaseModel
-from datetime import datetime
+import logging
 
 from backend.database import get_db
-from backend.models import Exercise
+from backend.models import Exercise, FormAssessment
+from backend.schemas import (
+    ExerciseCreate, ExerciseResponse, ExerciseUpdate,
+    FormAssessmentCreate, FormAssessmentResponse, FormAssessmentUpdate
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-# Pydantic schemas
-class ExerciseBase(BaseModel):
-    name: str
-    description: str | None = None
-    category: str | None = None
-    difficulty_level: str | None = None
-    target_muscles: str | None = None
-    equipment_needed: str | None = None
-    form_tips: str | None = None
-
-
-class ExerciseCreate(ExerciseBase):
-    user_id: int
-
-
-class ExerciseUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    category: str | None = None
-    difficulty_level: str | None = None
-    target_muscles: str | None = None
-    equipment_needed: str | None = None
-    form_tips: str | None = None
-
-
-class ExerciseResponse(ExerciseBase):
-    id: int
-    user_id: int
-    created_at: datetime
-    updated_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-
+# Exercise endpoints
 @router.post("/", response_model=ExerciseResponse, status_code=status.HTTP_201_CREATED)
-def create_exercise(exercise: ExerciseCreate, db: Session = Depends(get_db)):
+def create_exercise(exercise: ExerciseCreate, user_id: int, db: Session = Depends(get_db)):
     """Create a new exercise"""
-    db_exercise = Exercise(**exercise.model_dump())
+    db_exercise = Exercise(
+        user_id=user_id,
+        name=exercise.name,
+        description=exercise.description,
+        category=exercise.category,
+        difficulty_level=exercise.difficulty_level,
+        target_muscles=exercise.target_muscles,
+        equipment_needed=exercise.equipment_needed
+    )
     
     db.add(db_exercise)
     db.commit()
     db.refresh(db_exercise)
     
+    logger.info(f"Exercise created: {db_exercise.name} for user {user_id}")
     return db_exercise
 
 
@@ -61,18 +41,18 @@ def create_exercise(exercise: ExerciseCreate, db: Session = Depends(get_db)):
 def get_exercises(
     skip: int = 0,
     limit: int = 100,
-    category: str | None = None,
-    difficulty_level: str | None = None,
+    user_id: int = None,
+    category: str = None,
     db: Session = Depends(get_db)
 ):
-    """Get all exercises with optional filtering"""
+    """Get all exercises with optional filters"""
     query = db.query(Exercise)
+    
+    if user_id:
+        query = query.filter(Exercise.user_id == user_id)
     
     if category:
         query = query.filter(Exercise.category == category)
-    
-    if difficulty_level:
-        query = query.filter(Exercise.difficulty_level == difficulty_level)
     
     exercises = query.offset(skip).limit(limit).all()
     return exercises
@@ -99,38 +79,148 @@ def update_exercise(
     db: Session = Depends(get_db)
 ):
     """Update an exercise"""
-    db_exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
     
-    if not db_exercise:
+    if not exercise:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Exercise not found"
         )
     
-    # Update fields if provided
+    # Update fields
     update_data = exercise_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(db_exercise, field, value)
+        setattr(exercise, field, value)
     
-    db_exercise.updated_at = datetime.utcnow()
     db.commit()
-    db.refresh(db_exercise)
+    db.refresh(exercise)
     
-    return db_exercise
+    logger.info(f"Exercise updated: {exercise.name}")
+    return exercise
 
 
 @router.delete("/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_exercise(exercise_id: int, db: Session = Depends(get_db)):
     """Delete an exercise"""
-    db_exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
     
-    if not db_exercise:
+    if not exercise:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Exercise not found"
         )
     
-    db.delete(db_exercise)
+    db.delete(exercise)
     db.commit()
     
+    logger.info(f"Exercise deleted: {exercise.name}")
+    return None
+
+
+# Form Assessment endpoints
+@router.post("/{exercise_id}/assessments", response_model=FormAssessmentResponse, status_code=status.HTTP_201_CREATED)
+def create_form_assessment(
+    exercise_id: int,
+    assessment: FormAssessmentCreate,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    """Create a new form assessment for an exercise"""
+    # Verify exercise exists
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise not found"
+        )
+    
+    db_assessment = FormAssessment(
+        user_id=user_id,
+        exercise_id=exercise_id,
+        form_score=assessment.form_score,
+        feedback=assessment.feedback,
+        key_points=assessment.key_points,
+        video_url=assessment.video_url,
+        notes=assessment.notes
+    )
+    
+    db.add(db_assessment)
+    db.commit()
+    db.refresh(db_assessment)
+    
+    logger.info(f"Form assessment created for exercise {exercise_id}")
+    return db_assessment
+
+
+@router.get("/{exercise_id}/assessments", response_model=List[FormAssessmentResponse])
+def get_exercise_assessments(
+    exercise_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Get all form assessments for a specific exercise"""
+    assessments = db.query(FormAssessment).filter(
+        FormAssessment.exercise_id == exercise_id
+    ).offset(skip).limit(limit).all()
+    
+    return assessments
+
+
+@router.get("/assessments/{assessment_id}", response_model=FormAssessmentResponse)
+def get_form_assessment(assessment_id: int, db: Session = Depends(get_db)):
+    """Get a specific form assessment by ID"""
+    assessment = db.query(FormAssessment).filter(FormAssessment.id == assessment_id).first()
+    
+    if not assessment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Form assessment not found"
+        )
+    
+    return assessment
+
+
+@router.put("/assessments/{assessment_id}", response_model=FormAssessmentResponse)
+def update_form_assessment(
+    assessment_id: int,
+    assessment_update: FormAssessmentUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update a form assessment"""
+    assessment = db.query(FormAssessment).filter(FormAssessment.id == assessment_id).first()
+    
+    if not assessment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Form assessment not found"
+        )
+    
+    # Update fields
+    update_data = assessment_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(assessment, field, value)
+    
+    db.commit()
+    db.refresh(assessment)
+    
+    logger.info(f"Form assessment updated: {assessment_id}")
+    return assessment
+
+
+@router.delete("/assessments/{assessment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_form_assessment(assessment_id: int, db: Session = Depends(get_db)):
+    """Delete a form assessment"""
+    assessment = db.query(FormAssessment).filter(FormAssessment.id == assessment_id).first()
+    
+    if not assessment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Form assessment not found"
+        )
+    
+    db.delete(assessment)
+    db.commit()
+    
+    logger.info(f"Form assessment deleted: {assessment_id}")
     return None

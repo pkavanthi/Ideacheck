@@ -1,30 +1,45 @@
-# Smart Fitness Studio API
+# Movement Health Platform API
 
-A REST API for movement quality tracking and exercise form analysis, transforming every home into a smart fitness studio where professional coaching is accessible to everyone.
+A comprehensive movement health platform where proper exercise form becomes as accessible as workout videos themselves. This API provides the backend infrastructure for exercise tracking, form assessment, and movement optimization.
 
 ## Product Vision
 
-To create a world where movement quality matches movement quantity, making exercise not just harder but smarter and safer through accessible professional coaching at home.
+Create a comprehensive movement health platform where proper exercise form becomes as accessible as workout videos themselves, evolving into AR-integrated coaching with wearable sensor integration and community-driven movement optimization.
 
 ## Target Audience
 
 - Home fitness enthusiasts
-- Physical therapy patients
-- Fitness professionals
-- Anyone seeking to improve exercise form and prevent injuries during solo workouts
+- Rehabilitation patients
+- Virtual fitness instructors
+- Physiotherapists
+- Anyone seeking to improve exercise form and prevent injuries without expensive personal training or in-person sessions
 
 ## Core Features
 
 - **User Management**: Create and manage user profiles
-- **Exercise Library**: CRUD operations for exercises with detailed form tips and categorization
-- **Workout Tracking**: Plan, track, and complete workout sessions with exercise combinations
+- **Exercise Library**: CRUD operations for exercises with categorization
+- **Form Assessment**: Track and assess exercise form quality with scoring and feedback
+- **Movement Tracking**: Monitor progress over time with detailed assessments
 
 ## Technology Stack
 
-- **Backend Framework**: FastAPI (Python)
-- **Database**: SQLAlchemy ORM with SQLite (development) / PostgreSQL (production)
-- **Authentication**: JWT tokens with bcrypt password hashing
-- **Architecture**: Modular Monolith with clear separation of concerns
+- **Framework**: FastAPI 0.104.1
+- **Database**: SQLAlchemy 2.0.23 (SQLite for development, PostgreSQL/MySQL for production)
+- **Authentication**: JWT with python-jose
+- **Password Hashing**: Passlib with bcrypt
+- **Validation**: Pydantic 2.5.0
+- **Server**: Uvicorn
+
+## Architecture
+
+Modular Monolith architecture with clear separation of concerns:
+- `backend/main.py` - Application entry point
+- `backend/models.py` - Database models
+- `backend/schemas.py` - Pydantic schemas for validation
+- `backend/routers/` - API route handlers
+- `backend/config.py` - Configuration management
+- `backend/database.py` - Database connection
+- `backend/utils/` - Utility functions (security, etc.)
 
 ## Prerequisites
 
@@ -33,153 +48,199 @@ To create a world where movement quality matches movement quantity, making exerc
 
 ## Installation
 
-1. Clone the repository:
-```bash
-cd /app/user_workspace/team_058/49e53f53-3a11-4cc6-8580-0895a5571676
-```
+1. **Clone the repository** (or navigate to the project directory)
 
-2. Create a virtual environment:
+2. **Create a virtual environment**:
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Install dependencies:
+3. **Activate the virtual environment**:
+   - On Linux/Mac:
+     ```bash
+     source venv/bin/activate
+     ```
+   - On Windows:
+     ```bash
+     venv\Scripts\activate
+     ```
+
+4. **Install dependencies**:
 ```bash
 pip install -r backend/requirements.txt
 ```
 
-4. Set up environment variables:
+5. **Set up environment variables**:
 ```bash
 cp .env.example .env
-# Edit .env and update SECRET_KEY with a strong random string
 ```
+Edit `.env` and update the configuration values, especially:
+- `SECRET_KEY`: Use a strong random string for production
+- `DATABASE_URL`: Configure your database connection
 
-## Running Locally
+## Running the Application
 
-1. Activate the virtual environment (if not already activated):
-```bash
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+### Development Mode
 
-2. Start the development server:
+Run the application with auto-reload enabled:
+
 ```bash
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-3. Access the API:
-- API Base URL: http://localhost:8000
-- Interactive API Documentation (Swagger UI): http://localhost:8000/docs
-- Alternative API Documentation (ReDoc): http://localhost:8000/redoc
+The API will be available at:
+- API: http://localhost:8000
+- Interactive API docs (Swagger): http://localhost:8000/docs
+- Alternative API docs (ReDoc): http://localhost:8000/redoc
+
+### Production Mode
+
+For production, run without the `--reload` flag:
+
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
+```
 
 ## API Endpoints
 
 ### Health Check
-- `GET /` - Root endpoint with API information
+- `GET /` - Root endpoint
 - `GET /health` - Health check endpoint
 
 ### Users
-- `POST /api/v1/users` - Create a new user
-- `GET /api/v1/users` - Get all users (with pagination)
+- `POST /api/v1/users/` - Create a new user
+- `GET /api/v1/users/` - Get all users (with pagination)
 - `GET /api/v1/users/{user_id}` - Get a specific user
 - `PUT /api/v1/users/{user_id}` - Update a user
 - `DELETE /api/v1/users/{user_id}` - Delete a user
 
 ### Exercises
-- `POST /api/v1/exercises` - Create a new exercise
-- `GET /api/v1/exercises` - Get all exercises (with filtering by category/difficulty)
+- `POST /api/v1/exercises/?user_id={user_id}` - Create a new exercise
+- `GET /api/v1/exercises/` - Get all exercises (with filters)
 - `GET /api/v1/exercises/{exercise_id}` - Get a specific exercise
 - `PUT /api/v1/exercises/{exercise_id}` - Update an exercise
 - `DELETE /api/v1/exercises/{exercise_id}` - Delete an exercise
 
-### Workouts
-- `POST /api/v1/workouts` - Create a new workout
-- `GET /api/v1/workouts` - Get all workouts (with filtering by status/user)
-- `GET /api/v1/workouts/{workout_id}` - Get a specific workout
-- `PUT /api/v1/workouts/{workout_id}` - Update a workout
-- `DELETE /api/v1/workouts/{workout_id}` - Delete a workout
-- `POST /api/v1/workouts/{workout_id}/exercises` - Add an exercise to a workout
+### Form Assessments
+- `POST /api/v1/exercises/{exercise_id}/assessments?user_id={user_id}` - Create form assessment
+- `GET /api/v1/exercises/{exercise_id}/assessments` - Get all assessments for an exercise
+- `GET /api/v1/exercises/assessments/{assessment_id}` - Get a specific assessment
+- `PUT /api/v1/exercises/assessments/{assessment_id}` - Update an assessment
+- `DELETE /api/v1/exercises/assessments/{assessment_id}` - Delete an assessment
 
-## Database Schema
+## Database
 
-### Users
+The application uses SQLAlchemy ORM with support for multiple databases:
+
+### SQLite (Default - Development)
+No additional setup required. Database file will be created automatically.
+
+### PostgreSQL (Production)
+1. Install PostgreSQL
+2. Create a database:
+   ```sql
+   CREATE DATABASE movement_health;
+   ```
+3. Update `DATABASE_URL` in `.env`:
+   ```
+   DATABASE_URL=postgresql://user:password@localhost:5432/movement_health
+   ```
+
+### MySQL (Production)
+1. Install MySQL
+2. Create a database:
+   ```sql
+   CREATE DATABASE movement_health;
+   ```
+3. Update `DATABASE_URL` in `.env`:
+   ```
+   DATABASE_URL=mysql+pymysql://user:password@localhost:3306/movement_health
+   ```
+
+## Database Models
+
+### User
 - User authentication and profile management
-- Relationships: One-to-many with Workouts and Exercises
+- Fields: id, email, username, hashed_password, full_name, is_active, timestamps
 
-### Exercises
-- Exercise library with form tips and categorization
-- Fields: name, description, category, difficulty_level, target_muscles, equipment_needed, form_tips
+### Exercise
+- Exercise definitions and categorization
+- Fields: id, user_id, name, description, category, difficulty_level, target_muscles, equipment_needed, timestamps
 
-### Workouts
-- Workout session tracking
-- Fields: title, description, duration, calories_burned, status, scheduled_date, completed_date
-- Status options: planned, in_progress, completed
+### FormAssessment
+- Exercise form quality tracking
+- Fields: id, user_id, exercise_id, assessment_date, form_score, feedback, key_points, video_url, notes, created_at
 
-### WorkoutExercises
-- Junction table linking workouts and exercises
-- Additional fields: sets, reps, weight, duration, rest_seconds, form_score, order
+## Security
 
-## Configuration
-
-Key configuration options in `.env`:
-
-- `DATABASE_URL`: Database connection string
-- `SECRET_KEY`: Secret key for JWT token generation (must be changed in production)
-- `ACCESS_TOKEN_EXPIRE_MINUTES`: JWT token expiration time
-- `ALLOWED_ORIGINS`: CORS allowed origins
-
-## Architecture Overview
-
-The application follows a **Modular Monolith** architecture:
-
-```
-backend/
-├── main.py              # Application entry point and FastAPI setup
-├── config.py            # Configuration management
-├── database.py          # Database connection and session management
-├── models.py            # SQLAlchemy database models
-├── auth.py              # Authentication utilities (password hashing, JWT)
-└── routers/             # API route handlers
-    ├── users.py         # User management endpoints
-    ├── exercises.py     # Exercise CRUD endpoints
-    └── workouts.py      # Workout management endpoints
-```
-
-## Security Features
-
-- Password hashing using bcrypt
-- JWT token-based authentication
-- CORS configuration for cross-origin requests
-- Input validation using Pydantic models
-- SQL injection prevention through SQLAlchemy ORM
+- Passwords are hashed using bcrypt
+- JWT tokens for authentication (ready for implementation)
+- CORS middleware configured
+- Input validation using Pydantic
+- SQL injection prevention through ORM
 
 ## Development
 
-### Code Structure
-- **Models**: Database models defined in `backend/models.py`
-- **Routers**: API endpoints organized by resource in `backend/routers/`
-- **Configuration**: Centralized in `backend/config.py` using Pydantic settings
-- **Database**: Session management in `backend/database.py`
+### Project Structure
+```
+.
+├── backend/
+│   ├── __init__.py
+│   ├── main.py              # Application entry point
+│   ├── config.py            # Configuration
+│   ├── database.py          # Database setup
+│   ├── models.py            # SQLAlchemy models
+│   ├── schemas.py           # Pydantic schemas
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   ├── users.py         # User endpoints
+│   │   └── exercises.py     # Exercise & assessment endpoints
+│   └── utils/
+│       ├── __init__.py
+│       └── security.py      # Security utilities
+├── .env.example             # Environment variables template
+├── README.md                # This file
+└── requirements.txt         # Python dependencies
+```
 
 ### Adding New Features
-1. Define database models in `models.py`
-2. Create Pydantic schemas in the relevant router file
-3. Implement CRUD operations in router files
-4. Update database schema (migrations recommended for production)
 
-## Production Deployment
+1. Create new models in `backend/models.py`
+2. Create corresponding schemas in `backend/schemas.py`
+3. Create router in `backend/routers/`
+4. Register router in `backend/main.py`
 
-For production deployment:
+## Error Handling
 
-1. Change `DATABASE_URL` to PostgreSQL connection string
-2. Generate a strong `SECRET_KEY` (use `openssl rand -hex 32`)
-3. Set `DEBUG=False`
-4. Use a production ASGI server (uvicorn with workers or gunicorn)
-5. Set up proper CORS origins
-6. Implement database migrations using Alembic
-7. Add monitoring and logging
-8. Set up SSL/TLS certificates
+The API returns standard HTTP status codes:
+- `200 OK` - Successful GET/PUT requests
+- `201 Created` - Successful POST requests
+- `204 No Content` - Successful DELETE requests
+- `400 Bad Request` - Invalid input
+- `404 Not Found` - Resource not found
+- `500 Internal Server Error` - Server errors
+
+## Logging
+
+Application logs are configured with timestamps and log levels. Check console output for:
+- Application startup/shutdown
+- Database operations
+- API requests
+- Errors and warnings
+
+## Future Enhancements
+
+- AR-integrated coaching
+- Wearable sensor integration
+- Community-driven movement optimization
+- Video analysis for form assessment
+- Real-time feedback system
+- Social features and community sharing
 
 ## License
 
-This project is part of a fitness technology initiative to make professional coaching accessible to everyone.
+Proprietary - All rights reserved
+
+## Support
+
+For issues and questions, please contact the development team.
