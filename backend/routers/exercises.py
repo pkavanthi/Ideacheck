@@ -15,35 +15,29 @@ class ExerciseBase(BaseModel):
     name: str
     description: str | None = None
     category: str | None = None
-    difficulty: str | None = None
-    muscle_groups: str | None = None
+    difficulty_level: str | None = None
+    target_muscles: str | None = None
     equipment_needed: str | None = None
-    instructions: str | None = None
-    video_url: str | None = None
-    duration_seconds: int | None = None
-    calories_per_minute: float | None = None
+    form_tips: str | None = None
 
 
 class ExerciseCreate(ExerciseBase):
-    pass
+    user_id: int
 
 
 class ExerciseUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     category: str | None = None
-    difficulty: str | None = None
-    muscle_groups: str | None = None
+    difficulty_level: str | None = None
+    target_muscles: str | None = None
     equipment_needed: str | None = None
-    instructions: str | None = None
-    video_url: str | None = None
-    duration_seconds: int | None = None
-    calories_per_minute: float | None = None
+    form_tips: str | None = None
 
 
 class ExerciseResponse(ExerciseBase):
     id: int
-    is_active: bool
+    user_id: int
     created_at: datetime
     updated_at: datetime
     
@@ -68,17 +62,17 @@ def get_exercises(
     skip: int = 0,
     limit: int = 100,
     category: str | None = None,
-    difficulty: str | None = None,
+    difficulty_level: str | None = None,
     db: Session = Depends(get_db)
 ):
-    """Get all exercises with optional filters"""
-    query = db.query(Exercise).filter(Exercise.is_active == True)
+    """Get all exercises with optional filtering"""
+    query = db.query(Exercise)
     
     if category:
         query = query.filter(Exercise.category == category)
     
-    if difficulty:
-        query = query.filter(Exercise.difficulty == difficulty)
+    if difficulty_level:
+        query = query.filter(Exercise.difficulty_level == difficulty_level)
     
     exercises = query.offset(skip).limit(limit).all()
     return exercises
@@ -86,11 +80,8 @@ def get_exercises(
 
 @router.get("/{exercise_id}", response_model=ExerciseResponse)
 def get_exercise(exercise_id: int, db: Session = Depends(get_db)):
-    """Get an exercise by ID"""
-    exercise = db.query(Exercise).filter(
-        Exercise.id == exercise_id,
-        Exercise.is_active == True
-    ).first()
+    """Get a specific exercise by ID"""
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
     
     if not exercise:
         raise HTTPException(
@@ -108,43 +99,38 @@ def update_exercise(
     db: Session = Depends(get_db)
 ):
     """Update an exercise"""
-    exercise = db.query(Exercise).filter(
-        Exercise.id == exercise_id,
-        Exercise.is_active == True
-    ).first()
+    db_exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
     
-    if not exercise:
+    if not db_exercise:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Exercise not found"
         )
     
-    # Update fields
+    # Update fields if provided
     update_data = exercise_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(exercise, field, value)
+        setattr(db_exercise, field, value)
     
-    exercise.updated_at = datetime.utcnow()
+    db_exercise.updated_at = datetime.utcnow()
     db.commit()
-    db.refresh(exercise)
+    db.refresh(db_exercise)
     
-    return exercise
+    return db_exercise
 
 
 @router.delete("/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_exercise(exercise_id: int, db: Session = Depends(get_db)):
-    """Delete an exercise (soft delete)"""
-    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    """Delete an exercise"""
+    db_exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
     
-    if not exercise:
+    if not db_exercise:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Exercise not found"
         )
     
-    # Soft delete
-    exercise.is_active = False
-    exercise.updated_at = datetime.utcnow()
+    db.delete(db_exercise)
     db.commit()
     
     return None

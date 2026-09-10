@@ -3,15 +3,12 @@ from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from passlib.context import CryptContext
 
 from backend.database import get_db
 from backend.models import User
+from backend.auth import get_password_hash
 
 router = APIRouter()
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # Pydantic schemas
@@ -19,8 +16,6 @@ class UserBase(BaseModel):
     email: EmailStr
     username: str
     full_name: str | None = None
-    age: int | None = None
-    fitness_level: str | None = None
 
 
 class UserCreate(UserBase):
@@ -28,9 +23,10 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    username: str | None = None
     full_name: str | None = None
-    age: int | None = None
-    fitness_level: str | None = None
+    is_active: bool | None = None
 
 
 class UserResponse(UserBase):
@@ -43,20 +39,10 @@ class UserResponse(UserBase):
         from_attributes = True
 
 
-def get_password_hash(password: str) -> str:
-    """Hash a password"""
-    return pwd_context.hash(password)
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password"""
-    return pwd_context.verify(plain_password, hashed_password)
-
-
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     """Create a new user"""
-    # Check if user exists
+    # Check if user already exists
     db_user = db.query(User).filter(
         (User.email == user.email) | (User.username == user.username)
     ).first()
@@ -72,10 +58,8 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = User(
         email=user.email,
         username=user.username,
-        hashed_password=hashed_password,
         full_name=user.full_name,
-        age=user.age,
-        fitness_level=user.fitness_level
+        hashed_password=hashed_password
     )
     
     db.add(db_user)
@@ -88,14 +72,14 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=List[UserResponse])
 def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Get all users"""
-    users = db.query(User).filter(User.is_active == True).offset(skip).limit(limit).all()
+    users = db.query(User).offset(skip).limit(limit).all()
     return users
 
 
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(user_id: int, db: Session = Depends(get_db)):
-    """Get a user by ID"""
-    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    """Get a specific user by ID"""
+    user = db.query(User).filter(User.id == user_id).first()
     
     if not user:
         raise HTTPException(
@@ -109,40 +93,38 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 @router.put("/{user_id}", response_model=UserResponse)
 def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
     """Update a user"""
-    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    db_user = db.query(User).filter(User.id == user_id).first()
     
-    if not user:
+    if not db_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
     
-    # Update fields
+    # Update fields if provided
     update_data = user_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(user, field, value)
+        setattr(db_user, field, value)
     
-    user.updated_at = datetime.utcnow()
+    db_user.updated_at = datetime.utcnow()
     db.commit()
-    db.refresh(user)
+    db.refresh(db_user)
     
-    return user
+    return db_user
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(get_db)):
-    """Delete a user (soft delete)"""
-    user = db.query(User).filter(User.id == user_id).first()
+    """Delete a user"""
+    db_user = db.query(User).filter(User.id == user_id).first()
     
-    if not user:
+    if not db_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
     
-    # Soft delete
-    user.is_active = False
-    user.updated_at = datetime.utcnow()
+    db.delete(db_user)
     db.commit()
     
     return None

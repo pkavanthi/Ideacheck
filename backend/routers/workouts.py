@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 from backend.database import get_db
-from backend.models import Workout, WorkoutExercise, User, Exercise
+from backend.models import Workout, WorkoutExercise
 
 router = APIRouter()
 
@@ -15,60 +15,58 @@ class WorkoutExerciseBase(BaseModel):
     exercise_id: int
     sets: int | None = None
     reps: int | None = None
+    weight: float | None = None
     duration_seconds: int | None = None
     rest_seconds: int | None = None
-    order: int
+    order: int | None = None
+    form_score: float | None = None
     notes: str | None = None
-
-
-class WorkoutExerciseCreate(WorkoutExerciseBase):
-    pass
 
 
 class WorkoutExerciseResponse(WorkoutExerciseBase):
     id: int
     workout_id: int
-    completed: bool
+    created_at: datetime
     
     class Config:
         from_attributes = True
 
 
 class WorkoutBase(BaseModel):
-    name: str
+    title: str
     description: str | None = None
-    workout_type: str | None = None
     duration_minutes: int | None = None
-    difficulty: str | None = None
+    calories_burned: float | None = None
+    difficulty_level: str | None = None
+    status: str = "planned"
     scheduled_date: datetime | None = None
     notes: str | None = None
 
 
 class WorkoutCreate(WorkoutBase):
     user_id: int
-    exercises: List[WorkoutExerciseCreate] = []
+    exercises: List[WorkoutExerciseBase] = []
 
 
 class WorkoutUpdate(BaseModel):
-    name: str | None = None
+    title: str | None = None
     description: str | None = None
-    workout_type: str | None = None
     duration_minutes: int | None = None
-    difficulty: str | None = None
+    calories_burned: float | None = None
+    difficulty_level: str | None = None
+    status: str | None = None
     scheduled_date: datetime | None = None
-    completed: bool | None = None
+    completed_date: datetime | None = None
     notes: str | None = None
 
 
 class WorkoutResponse(WorkoutBase):
     id: int
     user_id: int
-    calories_burned: float | None = None
-    completed: bool
     completed_date: datetime | None = None
     created_at: datetime
     updated_at: datetime
-    exercises: List[WorkoutExerciseResponse] = []
+    workout_exercises: List[WorkoutExerciseResponse] = []
     
     class Config:
         from_attributes = True
@@ -77,14 +75,6 @@ class WorkoutResponse(WorkoutBase):
 @router.post("/", response_model=WorkoutResponse, status_code=status.HTTP_201_CREATED)
 def create_workout(workout: WorkoutCreate, db: Session = Depends(get_db)):
     """Create a new workout"""
-    # Verify user exists
-    user = db.query(User).filter(User.id == workout.user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
     # Create workout
     workout_data = workout.model_dump(exclude={'exercises'})
     db_workout = Workout(**workout_data)
@@ -94,17 +84,12 @@ def create_workout(workout: WorkoutCreate, db: Session = Depends(get_db)):
     db.refresh(db_workout)
     
     # Add exercises to workout
-    for exercise_data in workout.exercises:
-        # Verify exercise exists
-        exercise = db.query(Exercise).filter(Exercise.id == exercise_data.exercise_id).first()
-        if not exercise:
-            continue
-        
-        workout_exercise = WorkoutExercise(
+    for exercise in workout.exercises:
+        db_workout_exercise = WorkoutExercise(
             workout_id=db_workout.id,
-            **exercise_data.model_dump()
+            **exercise.model_dump()
         )
-        db.add(workout_exercise)
+        db.add(db_workout_exercise)
     
     db.commit()
     db.refresh(db_workout)
@@ -116,18 +101,18 @@ def create_workout(workout: WorkoutCreate, db: Session = Depends(get_db)):
 def get_workouts(
     skip: int = 0,
     limit: int = 100,
+    status: str | None = None,
     user_id: int | None = None,
-    completed: bool | None = None,
     db: Session = Depends(get_db)
 ):
-    """Get all workouts with optional filters"""
+    """Get all workouts with optional filtering"""
     query = db.query(Workout)
+    
+    if status:
+        query = query.filter(Workout.status == status)
     
     if user_id:
         query = query.filter(Workout.user_id == user_id)
-    
-    if completed is not None:
-        query = query.filter(Workout.completed == completed)
     
     workouts = query.offset(skip).limit(limit).all()
     return workouts
@@ -135,7 +120,7 @@ def get_workouts(
 
 @router.get("/{workout_id}", response_model=WorkoutResponse)
 def get_workout(workout_id: int, db: Session = Depends(get_db)):
-    """Get a workout by ID"""
+    """Get a specific workout by ID"""
     workout = db.query(Workout).filter(Workout.id == workout_id).first()
     
     if not workout:
@@ -154,42 +139,66 @@ def update_workout(
     db: Session = Depends(get_db)
 ):
     """Update a workout"""
-    workout = db.query(Workout).filter(Workout.id == workout_id).first()
+    db_workout = db.query(Workout).filter(Workout.id == workout_id).first()
     
-    if not workout:
+    if not db_workout:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workout not found"
         )
     
-    # Update fields
+    # Update fields if provided
     update_data = workout_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(workout, field, value)
+        setattr(db_workout, field, value)
     
-    # Set completed date if marking as completed
-    if workout_update.completed and not workout.completed:
-        workout.completed_date = datetime.utcnow()
-    
-    workout.updated_at = datetime.utcnow()
+    db_workout.updated_at = datetime.utcnow()
     db.commit()
-    db.refresh(workout)
+    db.refresh(db_workout)
     
-    return workout
+    return db_workout
 
 
 @router.delete("/{workout_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_workout(workout_id: int, db: Session = Depends(get_db)):
     """Delete a workout"""
-    workout = db.query(Workout).filter(Workout.id == workout_id).first()
+    db_workout = db.query(Workout).filter(Workout.id == workout_id).first()
     
-    if not workout:
+    if not db_workout:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workout not found"
         )
     
-    db.delete(workout)
+    db.delete(db_workout)
     db.commit()
     
     return None
+
+
+@router.post("/{workout_id}/exercises", response_model=WorkoutExerciseResponse, status_code=status.HTTP_201_CREATED)
+def add_exercise_to_workout(
+    workout_id: int,
+    exercise: WorkoutExerciseBase,
+    db: Session = Depends(get_db)
+):
+    """Add an exercise to a workout"""
+    # Check if workout exists
+    db_workout = db.query(Workout).filter(Workout.id == workout_id).first()
+    if not db_workout:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workout not found"
+        )
+    
+    # Create workout exercise
+    db_workout_exercise = WorkoutExercise(
+        workout_id=workout_id,
+        **exercise.model_dump()
+    )
+    
+    db.add(db_workout_exercise)
+    db.commit()
+    db.refresh(db_workout_exercise)
+    
+    return db_workout_exercise

@@ -1,22 +1,29 @@
-# EduTranslate - Educational Platform with Language Translation
+# Smart Fitness Studio API
 
-Transform education into a borderless, inclusive experience where language becomes an asset rather than a barrier, enabling world-class instruction to reach every student regardless of linguistic background.
+A REST API for movement quality tracking and exercise form analysis, transforming every home into a smart fitness studio where professional coaching is accessible to everyone.
 
 ## Product Vision
 
-EduTranslate is designed for international university students with varying language proficiencies, professors teaching diverse classrooms, and university administrators seeking to enhance global competitiveness and student success.
+To create a world where movement quality matches movement quantity, making exercise not just harder but smarter and safer through accessible professional coaching at home.
+
+## Target Audience
+
+- Home fitness enthusiasts
+- Physical therapy patients
+- Fitness professionals
+- Anyone seeking to improve exercise form and prevent injuries during solo workouts
 
 ## Core Features
 
-- **Course Management**: Create, read, update, and delete courses with multilingual support
-- **Course Materials**: Manage educational materials (lectures, assignments, readings) for each course
-- **Translation System**: Translate courses and materials into multiple languages to support diverse student populations
+- **User Management**: Create and manage user profiles
+- **Exercise Library**: CRUD operations for exercises with detailed form tips and categorization
+- **Workout Tracking**: Plan, track, and complete workout sessions with exercise combinations
 
 ## Technology Stack
 
 - **Backend Framework**: FastAPI (Python)
-- **Database**: SQLAlchemy ORM with SQLite (easily switchable to PostgreSQL/MySQL)
-- **API Style**: RESTful API
+- **Database**: SQLAlchemy ORM with SQLite (development) / PostgreSQL (production)
+- **Authentication**: JWT tokens with bcrypt password hashing
 - **Architecture**: Modular Monolith with clear separation of concerns
 
 ## Prerequisites
@@ -26,179 +33,153 @@ EduTranslate is designed for international university students with varying lang
 
 ## Installation
 
-1. **Clone or navigate to the project directory**
+1. Clone the repository:
+```bash
+cd /app/user_workspace/team_058/49e53f53-3a11-4cc6-8580-0895a5571676
+```
 
-2. **Create a virtual environment**
+2. Create a virtual environment:
 ```bash
 python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. **Activate the virtual environment**
-
-On Linux/Mac:
-```bash
-source venv/bin/activate
-```
-
-On Windows:
-```bash
-venv\Scripts\activate
-```
-
-4. **Install dependencies**
+3. Install dependencies:
 ```bash
 pip install -r backend/requirements.txt
 ```
 
-5. **Set up environment variables**
+4. Set up environment variables:
 ```bash
 cp .env.example .env
+# Edit .env and update SECRET_KEY with a strong random string
 ```
 
-Edit `.env` file and update the configuration values as needed, especially:
-- `SECRET_KEY`: Use a strong random string for production
-- `DATABASE_URL`: Update if using PostgreSQL or MySQL instead of SQLite
+## Running Locally
 
-## Running the Application
-
-1. **Initialize the database** (first time only)
+1. Activate the virtual environment (if not already activated):
 ```bash
-python -c "from backend.database import init_db; init_db()"
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-2. **Start the development server**
+2. Start the development server:
 ```bash
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at: `http://localhost:8000`
-
-3. **Access the API documentation**
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+3. Access the API:
+- API Base URL: http://localhost:8000
+- Interactive API Documentation (Swagger UI): http://localhost:8000/docs
+- Alternative API Documentation (ReDoc): http://localhost:8000/redoc
 
 ## API Endpoints
 
-### Courses
+### Health Check
+- `GET /` - Root endpoint with API information
+- `GET /health` - Health check endpoint
 
-- `POST /api/v1/courses` - Create a new course
-- `GET /api/v1/courses` - List all courses (supports filtering by language)
-- `GET /api/v1/courses/{course_id}` - Get a specific course
-- `PUT /api/v1/courses/{course_id}` - Update a course
-- `DELETE /api/v1/courses/{course_id}` - Delete a course
+### Users
+- `POST /api/v1/users` - Create a new user
+- `GET /api/v1/users` - Get all users (with pagination)
+- `GET /api/v1/users/{user_id}` - Get a specific user
+- `PUT /api/v1/users/{user_id}` - Update a user
+- `DELETE /api/v1/users/{user_id}` - Delete a user
 
-### Course Materials
+### Exercises
+- `POST /api/v1/exercises` - Create a new exercise
+- `GET /api/v1/exercises` - Get all exercises (with filtering by category/difficulty)
+- `GET /api/v1/exercises/{exercise_id}` - Get a specific exercise
+- `PUT /api/v1/exercises/{exercise_id}` - Update an exercise
+- `DELETE /api/v1/exercises/{exercise_id}` - Delete an exercise
 
-- `POST /api/v1/courses/{course_id}/materials` - Create course material
-- `GET /api/v1/courses/{course_id}/materials` - List materials for a course
-
-### Translations
-
-- `POST /api/v1/translations/courses/{course_id}` - Create course translation
-- `GET /api/v1/translations/courses/{course_id}` - List all translations for a course
-- `GET /api/v1/translations/courses/{course_id}/{language}` - Get specific translation
-- `DELETE /api/v1/translations/courses/{course_id}/{language}` - Delete translation
-- `POST /api/v1/translations/materials/{material_id}` - Create material translation
-- `GET /api/v1/translations/materials/{material_id}` - List material translations
-
-## Project Structure
-
-```
-.
-├── backend/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI application entry point
-│   ├── config.py            # Configuration management
-│   ├── database.py          # Database connection and session management
-│   ├── models.py            # SQLAlchemy database models
-│   └── routers/             # API route handlers
-│       ├── __init__.py
-│       ├── courses.py       # Course and material endpoints
-│       └── translations.py  # Translation endpoints
-├── .env.example             # Environment variables template
-├── README.md                # This file
-└── requirements.txt         # Python dependencies
-```
+### Workouts
+- `POST /api/v1/workouts` - Create a new workout
+- `GET /api/v1/workouts` - Get all workouts (with filtering by status/user)
+- `GET /api/v1/workouts/{workout_id}` - Get a specific workout
+- `PUT /api/v1/workouts/{workout_id}` - Update a workout
+- `DELETE /api/v1/workouts/{workout_id}` - Delete a workout
+- `POST /api/v1/workouts/{workout_id}/exercises` - Add an exercise to a workout
 
 ## Database Schema
 
-### Tables
+### Users
+- User authentication and profile management
+- Relationships: One-to-many with Workouts and Exercises
 
-1. **courses**: Main course information
-   - id, title, description, language, instructor_name, created_at, updated_at, is_active
+### Exercises
+- Exercise library with form tips and categorization
+- Fields: name, description, category, difficulty_level, target_muscles, equipment_needed, form_tips
 
-2. **course_translations**: Translated course content
-   - id, course_id, target_language, translated_title, translated_description, created_at
+### Workouts
+- Workout session tracking
+- Fields: title, description, duration, calories_burned, status, scheduled_date, completed_date
+- Status options: planned, in_progress, completed
 
-3. **course_materials**: Educational materials for courses
-   - id, course_id, title, content, material_type, language, created_at, updated_at
+### WorkoutExercises
+- Junction table linking workouts and exercises
+- Additional fields: sets, reps, weight, duration, rest_seconds, form_score, order
 
-4. **material_translations**: Translated material content
-   - id, material_id, target_language, translated_title, translated_content, created_at
+## Configuration
 
-## Example Usage
+Key configuration options in `.env`:
 
-### Create a Course
-```bash
-curl -X POST "http://localhost:8000/api/v1/courses" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Introduction to Computer Science",
-    "description": "Learn the fundamentals of programming",
-    "language": "en",
-    "instructor_name": "Dr. Smith"
-  }'
+- `DATABASE_URL`: Database connection string
+- `SECRET_KEY`: Secret key for JWT token generation (must be changed in production)
+- `ACCESS_TOKEN_EXPIRE_MINUTES`: JWT token expiration time
+- `ALLOWED_ORIGINS`: CORS allowed origins
+
+## Architecture Overview
+
+The application follows a **Modular Monolith** architecture:
+
+```
+backend/
+├── main.py              # Application entry point and FastAPI setup
+├── config.py            # Configuration management
+├── database.py          # Database connection and session management
+├── models.py            # SQLAlchemy database models
+├── auth.py              # Authentication utilities (password hashing, JWT)
+└── routers/             # API route handlers
+    ├── users.py         # User management endpoints
+    ├── exercises.py     # Exercise CRUD endpoints
+    └── workouts.py      # Workout management endpoints
 ```
 
-### Create a Translation
-```bash
-curl -X POST "http://localhost:8000/api/v1/translations/courses/1" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "target_language": "es",
-    "translated_title": "Introducción a las Ciencias de la Computación",
-    "translated_description": "Aprende los fundamentos de la programación"
-  }'
-```
+## Security Features
+
+- Password hashing using bcrypt
+- JWT token-based authentication
+- CORS configuration for cross-origin requests
+- Input validation using Pydantic models
+- SQL injection prevention through SQLAlchemy ORM
 
 ## Development
 
-### Code Quality
-- Follow PEP 8 style guidelines
-- Use type hints for better code clarity
-- Add docstrings to functions and classes
+### Code Structure
+- **Models**: Database models defined in `backend/models.py`
+- **Routers**: API endpoints organized by resource in `backend/routers/`
+- **Configuration**: Centralized in `backend/config.py` using Pydantic settings
+- **Database**: Session management in `backend/database.py`
 
 ### Adding New Features
-1. Create new models in `backend/models.py` if needed
-2. Add new routes in `backend/routers/`
-3. Update this README with new endpoints
+1. Define database models in `models.py`
+2. Create Pydantic schemas in the relevant router file
+3. Implement CRUD operations in router files
+4. Update database schema (migrations recommended for production)
 
 ## Production Deployment
 
 For production deployment:
 
-1. **Use a production-grade database** (PostgreSQL recommended)
-   - Update `DATABASE_URL` in `.env`
-
-2. **Set strong security values**
-   - Generate a strong `SECRET_KEY`
-   - Set `DEBUG=False`
-
-3. **Use a production ASGI server**
-```bash
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
-```
-
-4. **Consider using Docker** for containerized deployment
-
-5. **Set up proper CORS origins** for your frontend domain
-
-## Target Audience
-
-- **International Students**: Access course content in their preferred language
-- **Professors**: Reach diverse classrooms with multilingual content
-- **University Administrators**: Enhance global competitiveness and student success
+1. Change `DATABASE_URL` to PostgreSQL connection string
+2. Generate a strong `SECRET_KEY` (use `openssl rand -hex 32`)
+3. Set `DEBUG=False`
+4. Use a production ASGI server (uvicorn with workers or gunicorn)
+5. Set up proper CORS origins
+6. Implement database migrations using Alembic
+7. Add monitoring and logging
+8. Set up SSL/TLS certificates
 
 ## License
 
-This project is part of an educational platform initiative.
+This project is part of a fitness technology initiative to make professional coaching accessible to everyone.
