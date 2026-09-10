@@ -1,62 +1,85 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from backend.database import Base
 
 
-class User(Base):
-    """User model for authentication and profile management"""
-    __tablename__ = "users"
+class Student(Base):
+    """Student model"""
+    __tablename__ = "students"
     
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
-    username = Column(String(100), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    full_name = Column(String(255))
-    is_active = Column(Integer, default=1)
+    full_name = Column(String(255), nullable=False)
+    native_language = Column(String(50), nullable=False)
+    preferred_language = Column(String(50), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    exercises = relationship("Exercise", back_populates="user", cascade="all, delete-orphan")
-    form_assessments = relationship("FormAssessment", back_populates="user", cascade="all, delete-orphan")
+    enrollments = relationship("Enrollment", back_populates="student", cascade="all, delete-orphan")
 
 
-class Exercise(Base):
-    """Exercise model for tracking different exercise types"""
-    __tablename__ = "exercises"
+class Course(Base):
+    """Course model"""
+    __tablename__ = "courses"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    name = Column(String(255), nullable=False)
+    title = Column(String(255), nullable=False)
     description = Column(Text)
-    category = Column(String(100))  # e.g., strength, cardio, flexibility
-    difficulty_level = Column(String(50))  # beginner, intermediate, advanced
-    target_muscles = Column(Text)  # JSON string of muscle groups
-    equipment_needed = Column(Text)  # JSON string of equipment
+    original_language = Column(String(50), nullable=False)
+    instructor_name = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    user = relationship("User", back_populates="exercises")
-    form_assessments = relationship("FormAssessment", back_populates="exercise", cascade="all, delete-orphan")
+    enrollments = relationship("Enrollment", back_populates="course", cascade="all, delete-orphan")
+    content_items = relationship("CourseContent", back_populates="course", cascade="all, delete-orphan")
 
 
-class FormAssessment(Base):
-    """Form assessment model for tracking exercise form quality"""
-    __tablename__ = "form_assessments"
+class Enrollment(Base):
+    """Enrollment model - links students to courses"""
+    __tablename__ = "enrollments"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
-    assessment_date = Column(DateTime, default=datetime.utcnow)
-    form_score = Column(Float)  # 0-100 score
-    feedback = Column(Text)  # Detailed feedback on form
-    key_points = Column(Text)  # JSON string of key improvement points
-    video_url = Column(String(500))  # Optional video reference
-    notes = Column(Text)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
+    enrolled_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    student = relationship("Student", back_populates="enrollments")
+    course = relationship("Course", back_populates="enrollments")
+
+
+class CourseContent(Base):
+    """Course content model"""
+    __tablename__ = "course_content"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    content_type = Column(String(50), default="text")  # text, video, audio, etc.
+    order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    course = relationship("Course", back_populates="content_items")
+    translations = relationship("ContentTranslation", back_populates="content", cascade="all, delete-orphan")
+
+
+class ContentTranslation(Base):
+    """Content translation model"""
+    __tablename__ = "content_translations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    content_id = Column(Integer, ForeignKey("course_content.id"), nullable=False)
+    language = Column(String(50), nullable=False)
+    translated_title = Column(String(255), nullable=False)
+    translated_content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
-    user = relationship("User", back_populates="form_assessments")
-    exercise = relationship("Exercise", back_populates="form_assessments")
+    content = relationship("CourseContent", back_populates="translations")

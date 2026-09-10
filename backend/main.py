@@ -5,7 +5,7 @@ import logging
 
 from backend.config import settings
 from backend.database import engine, Base
-from backend.routers import exercises, users
+from backend.routers import courses, students, translations
 
 # Configure logging
 logging.basicConfig(
@@ -19,22 +19,22 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    logger.info("Starting Movement Health Platform API")
+    logger.info("Creating database tables...")
     Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created")
+    logger.info("Application startup complete")
     yield
     # Shutdown
-    logger.info("Shutting down Movement Health Platform API")
+    logger.info("Application shutdown")
 
 
 app = FastAPI(
-    title="Movement Health Platform API",
-    description="API for exercise form tracking and movement optimization",
+    title="Universal Learning Platform API",
+    description="API for language-accessible education platform",
     version="1.0.0",
     lifespan=lifespan
 )
 
-# CORS middleware
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -44,15 +44,16 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(exercises.router, prefix="/api/v1/exercises", tags=["exercises"])
-app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(courses.router, prefix="/api/v1/courses", tags=["courses"])
+app.include_router(students.router, prefix="/api/v1/students", tags=["students"])
+app.include_router(translations.router, prefix="/api/v1/translations", tags=["translations"])
 
 
 @app.get("/")
 async def root():
     """Root endpoint"""
     return {
-        "message": "Movement Health Platform API",
+        "message": "Universal Learning Platform API",
         "version": "1.0.0",
         "status": "operational"
     }

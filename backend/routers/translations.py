@@ -1,197 +1,151 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from pydantic import BaseModel
-from datetime import datetime
+import logging
 
 from backend.database import get_db
-from backend.models import Course, CourseTranslation, CourseMaterial, MaterialTranslation
+from backend.models import CourseContent, ContentTranslation
+from backend.schemas import (
+    TranslationRequest, TranslationResponse,
+    ContentTranslationCreate, ContentTranslationResponse
+)
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
-# Pydantic schemas
-class TranslationBase(BaseModel):
-    target_language: str
-    translated_title: str | None = None
-    translated_description: str | None = None
-
-
-class CourseTranslationCreate(TranslationBase):
-    pass
-
-
-class CourseTranslationResponse(TranslationBase):
-    id: int
-    course_id: int
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class MaterialTranslationBase(BaseModel):
-    target_language: str
-    translated_title: str | None = None
-    translated_content: str | None = None
-
-
-class MaterialTranslationCreate(MaterialTranslationBase):
-    pass
-
-
-class MaterialTranslationResponse(MaterialTranslationBase):
-    id: int
-    material_id: int
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-# Course translation endpoints
-@router.post("/courses/{course_id}", response_model=CourseTranslationResponse, status_code=status.HTTP_201_CREATED)
-async def create_course_translation(
-    course_id: int,
-    translation: CourseTranslationCreate,
-    db: Session = Depends(get_db)
-):
-    """Create a translation for a course"""
-    # Check if course exists
-    course = db.query(Course).filter(Course.id == course_id).first()
-    if not course:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Course with id {course_id} not found"
+@router.post("/translate", response_model=TranslationResponse)
+def translate_text(request: TranslationRequest):
+    """
+    Translate text from source language to target language
+    Note: This is a placeholder implementation. In production, integrate with a translation API.
+    """
+    try:
+        # Placeholder implementation - returns mock translation
+        # In production, integrate with Google Translate API, DeepL, or similar service
+        translated_text = f"[Translated to {request.target_language}] {request.text}"
+        
+        logger.info(f"Translation requested: {request.source_language} -> {request.target_language}")
+        
+        return TranslationResponse(
+            original_text=request.text,
+            translated_text=translated_text,
+            source_language=request.source_language,
+            target_language=request.target_language
         )
-    
-    # Check if translation already exists for this language
-    existing = db.query(CourseTranslation).filter(
-        CourseTranslation.course_id == course_id,
-        CourseTranslation.target_language == translation.target_language
-    ).first()
-    
-    if existing:
+    except Exception as e:
+        logger.error(f"Error translating text: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Translation for language {translation.target_language} already exists"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Translation failed"
         )
-    
-    db_translation = CourseTranslation(course_id=course_id, **translation.model_dump())
-    db.add(db_translation)
-    db.commit()
-    db.refresh(db_translation)
-    return db_translation
 
 
-@router.get("/courses/{course_id}", response_model=List[CourseTranslationResponse])
-async def list_course_translations(course_id: int, db: Session = Depends(get_db)):
-    """List all translations for a course"""
-    # Check if course exists
-    course = db.query(Course).filter(Course.id == course_id).first()
-    if not course:
+@router.post("/content", response_model=ContentTranslationResponse, status_code=status.HTTP_201_CREATED)
+def create_content_translation(translation: ContentTranslationCreate, db: Session = Depends(get_db)):
+    """Create a translation for course content"""
+    try:
+        # Verify content exists
+        content = db.query(CourseContent).filter(CourseContent.id == translation.content_id).first()
+        if not content:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Content not found"
+            )
+        
+        # Check if translation already exists for this language
+        existing = db.query(ContentTranslation).filter(
+            ContentTranslation.content_id == translation.content_id,
+            ContentTranslation.language == translation.language
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Translation already exists for this language"
+            )
+        
+        db_translation = ContentTranslation(**translation.model_dump())
+        db.add(db_translation)
+        db.commit()
+        db.refresh(db_translation)
+        
+        logger.info(f"Created translation for content {translation.content_id} in {translation.language}")
+        return db_translation
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating content translation: {str(e)}")
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Course with id {course_id} not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create translation"
         )
-    
-    translations = db.query(CourseTranslation).filter(
-        CourseTranslation.course_id == course_id
-    ).all()
-    return translations
 
 
-@router.get("/courses/{course_id}/{language}", response_model=CourseTranslationResponse)
-async def get_course_translation(
-    course_id: int,
-    language: str,
-    db: Session = Depends(get_db)
-):
-    """Get a specific course translation by language"""
-    translation = db.query(CourseTranslation).filter(
-        CourseTranslation.course_id == course_id,
-        CourseTranslation.target_language == language
-    ).first()
-    
-    if not translation:
+@router.get("/content/{content_id}", response_model=List[ContentTranslationResponse])
+def get_content_translations(content_id: int, db: Session = Depends(get_db)):
+    """Get all translations for a specific content item"""
+    try:
+        translations = db.query(ContentTranslation).filter(
+            ContentTranslation.content_id == content_id
+        ).all()
+        return translations
+    except Exception as e:
+        logger.error(f"Error fetching translations: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Translation for course {course_id} in language {language} not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch translations"
         )
-    
-    return translation
 
 
-@router.delete("/courses/{course_id}/{language}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_course_translation(
-    course_id: int,
-    language: str,
-    db: Session = Depends(get_db)
-):
-    """Delete a course translation"""
-    translation = db.query(CourseTranslation).filter(
-        CourseTranslation.course_id == course_id,
-        CourseTranslation.target_language == language
-    ).first()
-    
-    if not translation:
+@router.get("/content/{content_id}/language/{language}", response_model=ContentTranslationResponse)
+def get_content_translation_by_language(content_id: int, language: str, db: Session = Depends(get_db)):
+    """Get a specific translation for content in a given language"""
+    try:
+        translation = db.query(ContentTranslation).filter(
+            ContentTranslation.content_id == content_id,
+            ContentTranslation.language == language
+        ).first()
+        
+        if not translation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Translation not found for this language"
+            )
+        
+        return translation
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching translation: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Translation for course {course_id} in language {language} not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch translation"
         )
-    
-    db.delete(translation)
-    db.commit()
-    return None
 
 
-# Material translation endpoints
-@router.post("/materials/{material_id}", response_model=MaterialTranslationResponse, status_code=status.HTTP_201_CREATED)
-async def create_material_translation(
-    material_id: int,
-    translation: MaterialTranslationCreate,
-    db: Session = Depends(get_db)
-):
-    """Create a translation for a course material"""
-    # Check if material exists
-    material = db.query(CourseMaterial).filter(CourseMaterial.id == material_id).first()
-    if not material:
+@router.delete("/content/{translation_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_content_translation(translation_id: int, db: Session = Depends(get_db)):
+    """Delete a content translation"""
+    try:
+        translation = db.query(ContentTranslation).filter(ContentTranslation.id == translation_id).first()
+        if not translation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Translation not found"
+            )
+        
+        db.delete(translation)
+        db.commit()
+        
+        logger.info(f"Deleted translation: {translation_id}")
+        return None
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting translation: {str(e)}")
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Material with id {material_id} not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete translation"
         )
-    
-    # Check if translation already exists for this language
-    existing = db.query(MaterialTranslation).filter(
-        MaterialTranslation.material_id == material_id,
-        MaterialTranslation.target_language == translation.target_language
-    ).first()
-    
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Translation for language {translation.target_language} already exists"
-        )
-    
-    db_translation = MaterialTranslation(material_id=material_id, **translation.model_dump())
-    db.add(db_translation)
-    db.commit()
-    db.refresh(db_translation)
-    return db_translation
-
-
-@router.get("/materials/{material_id}", response_model=List[MaterialTranslationResponse])
-async def list_material_translations(material_id: int, db: Session = Depends(get_db)):
-    """List all translations for a material"""
-    # Check if material exists
-    material = db.query(CourseMaterial).filter(CourseMaterial.id == material_id).first()
-    if not material:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Material with id {material_id} not found"
-        )
-    
-    translations = db.query(MaterialTranslation).filter(
-        MaterialTranslation.material_id == material_id
-    ).all()
-    return translations

@@ -5,29 +5,31 @@ import logging
 
 from backend.database import get_db
 from backend.models import Student
-from backend.schemas import Student as StudentSchema, StudentCreate, StudentUpdate
+from backend.schemas import StudentCreate, StudentUpdate, StudentResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/", response_model=StudentSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=StudentResponse, status_code=status.HTTP_201_CREATED)
 def create_student(student: StudentCreate, db: Session = Depends(get_db)):
     """Create a new student"""
     try:
-        db_student = db.query(Student).filter(Student.email == student.email).first()
-        if db_student:
+        # Check if email already exists
+        existing_student = db.query(Student).filter(Student.email == student.email).first()
+        if existing_student:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
             )
         
-        new_student = Student(**student.model_dump())
-        db.add(new_student)
+        db_student = Student(**student.model_dump())
+        db.add(db_student)
         db.commit()
-        db.refresh(new_student)
-        logger.info(f"Created student: {new_student.id}")
-        return new_student
+        db.refresh(db_student)
+        
+        logger.info(f"Created student: {db_student.id}")
+        return db_student
     except HTTPException:
         raise
     except Exception as e:
@@ -39,9 +41,9 @@ def create_student(student: StudentCreate, db: Session = Depends(get_db)):
         )
 
 
-@router.get("/", response_model=List[StudentSchema])
+@router.get("/", response_model=List[StudentResponse])
 def get_students(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """Get all students with pagination"""
+    """Get all students"""
     try:
         students = db.query(Student).offset(skip).limit(limit).all()
         return students
@@ -53,7 +55,7 @@ def get_students(skip: int = 0, limit: int = 100, db: Session = Depends(get_db))
         )
 
 
-@router.get("/{student_id}", response_model=StudentSchema)
+@router.get("/{student_id}", response_model=StudentResponse)
 def get_student(student_id: int, db: Session = Depends(get_db)):
     """Get a specific student by ID"""
     try:
@@ -74,7 +76,7 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
         )
 
 
-@router.put("/{student_id}", response_model=StudentSchema)
+@router.put("/{student_id}", response_model=StudentResponse)
 def update_student(student_id: int, student_update: StudentUpdate, db: Session = Depends(get_db)):
     """Update a student"""
     try:
@@ -86,23 +88,12 @@ def update_student(student_id: int, student_update: StudentUpdate, db: Session =
             )
         
         update_data = student_update.model_dump(exclude_unset=True)
-        
-        if "email" in update_data:
-            existing = db.query(Student).filter(
-                Student.email == update_data["email"],
-                Student.id != student_id
-            ).first()
-            if existing:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already registered"
-                )
-        
         for field, value in update_data.items():
             setattr(db_student, field, value)
         
         db.commit()
         db.refresh(db_student)
+        
         logger.info(f"Updated student: {student_id}")
         return db_student
     except HTTPException:
@@ -129,6 +120,7 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
         
         db.delete(db_student)
         db.commit()
+        
         logger.info(f"Deleted student: {student_id}")
         return None
     except HTTPException:

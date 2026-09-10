@@ -1,49 +1,35 @@
-# Movement Health Platform API
+# Universal Learning Platform
 
-A comprehensive movement health platform where proper exercise form becomes as accessible as workout videos themselves. This API provides the backend infrastructure for exercise tracking, form assessment, and movement optimization.
+A universal learning platform where language is never a barrier to education, enabling every student worldwide to access quality instruction in their native language.
 
 ## Product Vision
 
-Create a comprehensive movement health platform where proper exercise form becomes as accessible as workout videos themselves, evolving into AR-integrated coaching with wearable sensor integration and community-driven movement optimization.
+To create a universal learning platform where language is never a barrier to education, enabling every student worldwide to access quality instruction in their native language and fostering truly inclusive, equitable educational environments.
 
 ## Target Audience
 
-- Home fitness enthusiasts
-- Rehabilitation patients
-- Virtual fitness instructors
-- Physiotherapists
-- Anyone seeking to improve exercise form and prevent injuries without expensive personal training or in-person sessions
+- **International university students** with varying language proficiencies
+- **Professors** teaching diverse classrooms
+- **Educational administrators** seeking to improve institutional accessibility and reduce dropout rates among non-native speakers
 
 ## Core Features
 
-- **User Management**: Create and manage user profiles
-- **Exercise Library**: CRUD operations for exercises with categorization
-- **Form Assessment**: Track and assess exercise form quality with scoring and feedback
-- **Movement Tracking**: Monitor progress over time with detailed assessments
+- **Student Management**: Create, read, update, and delete student profiles with language preferences
+- **Course Management**: Manage courses with multilingual support
+- **Content Translation**: Translate course content into multiple languages
+- **Enrollment System**: Enroll students in courses and track their progress
 
 ## Technology Stack
 
-- **Framework**: FastAPI 0.104.1
-- **Database**: SQLAlchemy 2.0.23 (SQLite for development, PostgreSQL/MySQL for production)
-- **Authentication**: JWT with python-jose
-- **Password Hashing**: Passlib with bcrypt
-- **Validation**: Pydantic 2.5.0
-- **Server**: Uvicorn
-
-## Architecture
-
-Modular Monolith architecture with clear separation of concerns:
-- `backend/main.py` - Application entry point
-- `backend/models.py` - Database models
-- `backend/schemas.py` - Pydantic schemas for validation
-- `backend/routers/` - API route handlers
-- `backend/config.py` - Configuration management
-- `backend/database.py` - Database connection
-- `backend/utils/` - Utility functions (security, etc.)
+- **Backend Framework**: FastAPI (Python)
+- **Database**: SQLite (easily upgradeable to PostgreSQL)
+- **ORM**: SQLAlchemy
+- **Data Validation**: Pydantic
+- **Architecture**: Modular Monolith
 
 ## Prerequisites
 
-- Python 3.9 or higher
+- Python 3.8 or higher
 - pip (Python package manager)
 
 ## Installation
@@ -51,157 +37,113 @@ Modular Monolith architecture with clear separation of concerns:
 1. **Clone the repository** (or navigate to the project directory)
 
 2. **Create a virtual environment**:
-```bash
-python -m venv venv
-```
+   ```bash
+   python -m venv venv
+   ```
 
 3. **Activate the virtual environment**:
-   - On Linux/Mac:
-     ```bash
-     source venv/bin/activate
-     ```
    - On Windows:
      ```bash
      venv\Scripts\activate
      ```
+   - On macOS/Linux:
+     ```bash
+     source venv/bin/activate
+     ```
 
 4. **Install dependencies**:
-```bash
-pip install -r backend/requirements.txt
-```
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
 
 5. **Set up environment variables**:
-```bash
-cp .env.example .env
-```
-Edit `.env` and update the configuration values, especially:
-- `SECRET_KEY`: Use a strong random string for production
-- `DATABASE_URL`: Configure your database connection
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` file and update the configuration values as needed.
 
 ## Running the Application
 
-### Development Mode
+1. **Start the development server**:
+   ```bash
+   uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+   ```
 
-Run the application with auto-reload enabled:
-
-```bash
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-The API will be available at:
-- API: http://localhost:8000
-- Interactive API docs (Swagger): http://localhost:8000/docs
-- Alternative API docs (ReDoc): http://localhost:8000/redoc
-
-### Production Mode
-
-For production, run without the `--reload` flag:
-
-```bash
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
-```
+2. **Access the application**:
+   - API: http://localhost:8000
+   - Interactive API Documentation (Swagger UI): http://localhost:8000/docs
+   - Alternative API Documentation (ReDoc): http://localhost:8000/redoc
 
 ## API Endpoints
 
-### Health Check
-- `GET /` - Root endpoint
-- `GET /health` - Health check endpoint
+### Students
+- `POST /api/v1/students/` - Create a new student
+- `GET /api/v1/students/` - Get all students
+- `GET /api/v1/students/{student_id}` - Get a specific student
+- `PUT /api/v1/students/{student_id}` - Update a student
+- `DELETE /api/v1/students/{student_id}` - Delete a student
 
-### Users
-- `POST /api/v1/users/` - Create a new user
-- `GET /api/v1/users/` - Get all users (with pagination)
-- `GET /api/v1/users/{user_id}` - Get a specific user
-- `PUT /api/v1/users/{user_id}` - Update a user
-- `DELETE /api/v1/users/{user_id}` - Delete a user
+### Courses
+- `POST /api/v1/courses/` - Create a new course
+- `GET /api/v1/courses/` - Get all courses
+- `GET /api/v1/courses/{course_id}` - Get a specific course
+- `PUT /api/v1/courses/{course_id}` - Update a course
+- `DELETE /api/v1/courses/{course_id}` - Delete a course
+- `POST /api/v1/courses/{course_id}/enroll` - Enroll a student in a course
+- `POST /api/v1/courses/{course_id}/content` - Create course content
+- `GET /api/v1/courses/{course_id}/content` - Get all content for a course
 
-### Exercises
-- `POST /api/v1/exercises/?user_id={user_id}` - Create a new exercise
-- `GET /api/v1/exercises/` - Get all exercises (with filters)
-- `GET /api/v1/exercises/{exercise_id}` - Get a specific exercise
-- `PUT /api/v1/exercises/{exercise_id}` - Update an exercise
-- `DELETE /api/v1/exercises/{exercise_id}` - Delete an exercise
+### Translations
+- `POST /api/v1/translations/translate` - Translate text (placeholder implementation)
+- `POST /api/v1/translations/content` - Create a content translation
+- `GET /api/v1/translations/content/{content_id}` - Get all translations for content
+- `GET /api/v1/translations/content/{content_id}/language/{language}` - Get translation by language
+- `DELETE /api/v1/translations/content/{translation_id}` - Delete a translation
 
-### Form Assessments
-- `POST /api/v1/exercises/{exercise_id}/assessments?user_id={user_id}` - Create form assessment
-- `GET /api/v1/exercises/{exercise_id}/assessments` - Get all assessments for an exercise
-- `GET /api/v1/exercises/assessments/{assessment_id}` - Get a specific assessment
-- `PUT /api/v1/exercises/assessments/{assessment_id}` - Update an assessment
-- `DELETE /api/v1/exercises/assessments/{assessment_id}` - Delete an assessment
+## Project Structure
 
-## Database
-
-The application uses SQLAlchemy ORM with support for multiple databases:
-
-### SQLite (Default - Development)
-No additional setup required. Database file will be created automatically.
-
-### PostgreSQL (Production)
-1. Install PostgreSQL
-2. Create a database:
-   ```sql
-   CREATE DATABASE movement_health;
-   ```
-3. Update `DATABASE_URL` in `.env`:
-   ```
-   DATABASE_URL=postgresql://user:password@localhost:5432/movement_health
-   ```
-
-### MySQL (Production)
-1. Install MySQL
-2. Create a database:
-   ```sql
-   CREATE DATABASE movement_health;
-   ```
-3. Update `DATABASE_URL` in `.env`:
-   ```
-   DATABASE_URL=mysql+pymysql://user:password@localhost:3306/movement_health
-   ```
-
-## Database Models
-
-### User
-- User authentication and profile management
-- Fields: id, email, username, hashed_password, full_name, is_active, timestamps
-
-### Exercise
-- Exercise definitions and categorization
-- Fields: id, user_id, name, description, category, difficulty_level, target_muscles, equipment_needed, timestamps
-
-### FormAssessment
-- Exercise form quality tracking
-- Fields: id, user_id, exercise_id, assessment_date, form_score, feedback, key_points, video_url, notes, created_at
-
-## Security
-
-- Passwords are hashed using bcrypt
-- JWT tokens for authentication (ready for implementation)
-- CORS middleware configured
-- Input validation using Pydantic
-- SQL injection prevention through ORM
-
-## Development
-
-### Project Structure
 ```
 .
 ├── backend/
 │   ├── __init__.py
-│   ├── main.py              # Application entry point
-│   ├── config.py            # Configuration
-│   ├── database.py          # Database setup
-│   ├── models.py            # SQLAlchemy models
-│   ├── schemas.py           # Pydantic schemas
-│   ├── routers/
-│   │   ├── __init__.py
-│   │   ├── users.py         # User endpoints
-│   │   └── exercises.py     # Exercise & assessment endpoints
-│   └── utils/
+│   ├── main.py              # Main application entry point
+│   ├── config.py            # Configuration management
+│   ├── database.py          # Database connection and session
+│   ├── models.py            # SQLAlchemy database models
+│   ├── schemas.py           # Pydantic schemas for validation
+│   ├── requirements.txt     # Python dependencies
+│   └── routers/             # API route handlers
 │       ├── __init__.py
-│       └── security.py      # Security utilities
-├── .env.example             # Environment variables template
-├── README.md                # This file
-└── requirements.txt         # Python dependencies
+│       ├── students.py      # Student endpoints
+│       ├── courses.py       # Course endpoints
+│       └── translations.py  # Translation endpoints
+├── .env.example             # Example environment variables
+└── README.md                # This file
 ```
+
+## Database Models
+
+### Student
+- Email, full name, native language, preferred language
+- Relationships: enrollments
+
+### Course
+- Title, description, original language, instructor name
+- Relationships: enrollments, content items
+
+### Enrollment
+- Links students to courses
+- Tracks enrollment date
+
+### CourseContent
+- Course materials (text, video, audio)
+- Relationships: translations
+
+### ContentTranslation
+- Translated versions of course content
+- Supports multiple languages per content item
+
+## Development
 
 ### Adding New Features
 
@@ -210,37 +152,34 @@ No additional setup required. Database file will be created automatically.
 3. Create router in `backend/routers/`
 4. Register router in `backend/main.py`
 
-## Error Handling
+### Database Migrations
 
-The API returns standard HTTP status codes:
-- `200 OK` - Successful GET/PUT requests
-- `201 Created` - Successful POST requests
-- `204 No Content` - Successful DELETE requests
-- `400 Bad Request` - Invalid input
-- `404 Not Found` - Resource not found
-- `500 Internal Server Error` - Server errors
+The application automatically creates tables on startup. For production, consider using Alembic for proper database migrations.
 
-## Logging
+## Security Considerations
 
-Application logs are configured with timestamps and log levels. Check console output for:
-- Application startup/shutdown
-- Database operations
-- API requests
-- Errors and warnings
+- Change `SECRET_KEY` in `.env` to a strong random string in production
+- Use PostgreSQL or MySQL instead of SQLite for production
+- Implement proper authentication and authorization
+- Enable HTTPS in production
+- Configure CORS appropriately for your frontend domain
+- Implement rate limiting for API endpoints
 
 ## Future Enhancements
 
-- AR-integrated coaching
-- Wearable sensor integration
-- Community-driven movement optimization
-- Video analysis for form assessment
-- Real-time feedback system
-- Social features and community sharing
+- Integration with translation APIs (Google Translate, DeepL)
+- Real-time translation during lectures
+- Video/audio content translation
+- User authentication and authorization
+- Progress tracking and analytics
+- Mobile application
+- Advanced search and filtering
+- Notification system
 
 ## License
 
-Proprietary - All rights reserved
+This project is part of an educational initiative to make learning accessible to all students regardless of language barriers.
 
 ## Support
 
-For issues and questions, please contact the development team.
+For questions or issues, please contact the development team or create an issue in the project repository.

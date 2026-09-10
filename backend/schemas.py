@@ -1,61 +1,28 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
 from datetime import datetime
+from typing import Optional, List
 
 
-# User Schemas
-class UserBase(BaseModel):
+# Student Schemas
+class StudentBase(BaseModel):
     email: EmailStr
-    username: str
-    full_name: Optional[str] = None
+    full_name: str = Field(..., min_length=1, max_length=255)
+    native_language: str = Field(..., min_length=2, max_length=50)
+    preferred_language: str = Field(..., min_length=2, max_length=50)
 
 
-class UserCreate(UserBase):
-    password: str = Field(..., min_length=8)
-
-
-class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    username: Optional[str] = None
-    full_name: Optional[str] = None
-    password: Optional[str] = None
-
-
-class UserResponse(UserBase):
-    id: int
-    is_active: int
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-
-# Exercise Schemas
-class ExerciseBase(BaseModel):
-    name: str
-    description: Optional[str] = None
-    category: Optional[str] = None
-    difficulty_level: Optional[str] = None
-    target_muscles: Optional[str] = None
-    equipment_needed: Optional[str] = None
-
-
-class ExerciseCreate(ExerciseBase):
+class StudentCreate(StudentBase):
     pass
 
 
-class ExerciseUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    category: Optional[str] = None
-    difficulty_level: Optional[str] = None
-    target_muscles: Optional[str] = None
-    equipment_needed: Optional[str] = None
+class StudentUpdate(BaseModel):
+    full_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    native_language: Optional[str] = Field(None, min_length=2, max_length=50)
+    preferred_language: Optional[str] = Field(None, min_length=2, max_length=50)
 
 
-class ExerciseResponse(ExerciseBase):
+class StudentResponse(StudentBase):
     id: int
-    user_id: int
     created_at: datetime
     updated_at: datetime
     
@@ -63,32 +30,107 @@ class ExerciseResponse(ExerciseBase):
         from_attributes = True
 
 
-# Form Assessment Schemas
-class FormAssessmentBase(BaseModel):
-    exercise_id: int
-    form_score: Optional[float] = Field(None, ge=0, le=100)
-    feedback: Optional[str] = None
-    key_points: Optional[str] = None
-    video_url: Optional[str] = None
-    notes: Optional[str] = None
+# Course Schemas
+class CourseBase(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+    original_language: str = Field(..., min_length=2, max_length=50)
+    instructor_name: str = Field(..., min_length=1, max_length=255)
+    is_active: bool = True
 
 
-class FormAssessmentCreate(FormAssessmentBase):
+class CourseCreate(CourseBase):
     pass
 
 
-class FormAssessmentUpdate(BaseModel):
-    form_score: Optional[float] = Field(None, ge=0, le=100)
-    feedback: Optional[str] = None
-    key_points: Optional[str] = None
-    video_url: Optional[str] = None
-    notes: Optional[str] = None
+class CourseUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = None
+    instructor_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    is_active: Optional[bool] = None
 
 
-class FormAssessmentResponse(FormAssessmentBase):
+class CourseResponse(CourseBase):
     id: int
-    user_id: int
-    assessment_date: datetime
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Enrollment Schemas
+class EnrollmentCreate(BaseModel):
+    student_id: int
+    course_id: int
+
+
+class EnrollmentResponse(BaseModel):
+    id: int
+    student_id: int
+    course_id: int
+    enrolled_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Course Content Schemas
+class CourseContentBase(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
+    content: str = Field(..., min_length=1)
+    content_type: str = Field(default="text", max_length=50)
+    order: int = Field(default=0, ge=0)
+
+
+class CourseContentCreate(CourseContentBase):
+    course_id: int
+
+
+class CourseContentUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
+    content: Optional[str] = Field(None, min_length=1)
+    content_type: Optional[str] = Field(None, max_length=50)
+    order: Optional[int] = Field(None, ge=0)
+
+
+class CourseContentResponse(CourseContentBase):
+    id: int
+    course_id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Translation Schemas
+class TranslationRequest(BaseModel):
+    text: str = Field(..., min_length=1)
+    source_language: str = Field(..., min_length=2, max_length=50)
+    target_language: str = Field(..., min_length=2, max_length=50)
+
+
+class TranslationResponse(BaseModel):
+    original_text: str
+    translated_text: str
+    source_language: str
+    target_language: str
+
+
+class ContentTranslationCreate(BaseModel):
+    content_id: int
+    language: str = Field(..., min_length=2, max_length=50)
+    translated_title: str = Field(..., min_length=1, max_length=255)
+    translated_content: str = Field(..., min_length=1)
+
+
+class ContentTranslationResponse(BaseModel):
+    id: int
+    content_id: int
+    language: str
+    translated_title: str
+    translated_content: str
     created_at: datetime
     
     class Config:
