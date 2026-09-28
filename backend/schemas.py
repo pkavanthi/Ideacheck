@@ -1,137 +1,162 @@
-from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr, field_validator
+
+from backend.models import BondStatus, FarmerStatus
 
 
-# Student Schemas
-class StudentBase(BaseModel):
+# ---------------------------------------------------------------------------
+# Farmer schemas
+# ---------------------------------------------------------------------------
+
+class FarmerBase(BaseModel):
+    name: str
+    phone: str
+    village: str
+    district: str
+    state: str
+    land_area_acres: float
+    crop_type: str
+    fpo_id: Optional[int] = None
+
+
+class FarmerCreate(FarmerBase):
+    pass
+
+
+class FarmerUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    village: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    land_area_acres: Optional[float] = None
+    crop_type: Optional[str] = None
+    fpo_id: Optional[int] = None
+    status: Optional[FarmerStatus] = None
+
+
+class FarmerOut(FarmerBase):
+    id: int
+    status: FarmerStatus
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# FPO schemas
+# ---------------------------------------------------------------------------
+
+class FPOBase(BaseModel):
+    name: str
+    registration_number: str
+    treasurer_name: str
+    treasurer_phone: str
+    district: str
+    state: str
+
+
+class FPOCreate(FPOBase):
+    pass
+
+
+class FPOUpdate(BaseModel):
+    name: Optional[str] = None
+    treasurer_name: Optional[str] = None
+    treasurer_phone: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+
+
+class FPOOut(FPOBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Bond schemas
+# ---------------------------------------------------------------------------
+
+class BondBase(BaseModel):
+    farmer_id: int
+    crop_type: str
+    harvest_quantity_kg: float
+    harvest_fraction: float
+    face_value: float
+    interest_rate_pct: float
+    maturity_date: datetime
+
+    @field_validator("harvest_fraction")
+    @classmethod
+    def fraction_range(cls, v: float) -> float:
+        if not 0.0 < v <= 1.0:
+            raise ValueError("harvest_fraction must be between 0 (exclusive) and 1 (inclusive)")
+        return v
+
+    @field_validator("face_value", "harvest_quantity_kg")
+    @classmethod
+    def positive_value(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("Value must be positive")
+        return v
+
+
+class BondCreate(BondBase):
+    pass
+
+
+class BondUpdate(BaseModel):
+    verifier_name: Optional[str] = None
+    verification_notes: Optional[str] = None
+    issued_capital: Optional[float] = None
+    buyer_id: Optional[int] = None
+    status: Optional[BondStatus] = None
+
+
+class BondOut(BondBase):
+    id: int
+    issued_capital: Optional[float] = None
+    verifier_name: Optional[str] = None
+    verification_notes: Optional[str] = None
+    buyer_id: Optional[int] = None
+    status: BondStatus
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Buyer schemas
+# ---------------------------------------------------------------------------
+
+class BuyerBase(BaseModel):
+    name: str
+    organisation: str
+    phone: str
     email: EmailStr
-    full_name: str = Field(..., min_length=1, max_length=255)
-    native_language: str = Field(..., min_length=2, max_length=50)
-    preferred_language: str = Field(..., min_length=2, max_length=50)
 
 
-class StudentCreate(StudentBase):
+class BuyerCreate(BuyerBase):
     pass
 
 
-class StudentUpdate(BaseModel):
-    full_name: Optional[str] = Field(None, min_length=1, max_length=255)
-    native_language: Optional[str] = Field(None, min_length=2, max_length=50)
-    preferred_language: Optional[str] = Field(None, min_length=2, max_length=50)
+class BuyerUpdate(BaseModel):
+    name: Optional[str] = None
+    organisation: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
 
 
-class StudentResponse(StudentBase):
+class BuyerOut(BuyerBase):
     id: int
     created_at: datetime
-    updated_at: datetime
-    
-    class Config:
-        from_attributes = True
+    updated_at: Optional[datetime] = None
 
-
-# Course Schemas
-class CourseBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
-    original_language: str = Field(..., min_length=2, max_length=50)
-    instructor_name: str = Field(..., min_length=1, max_length=255)
-    is_active: bool = True
-
-
-class CourseCreate(CourseBase):
-    pass
-
-
-class CourseUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = None
-    instructor_name: Optional[str] = Field(None, min_length=1, max_length=255)
-    is_active: Optional[bool] = None
-
-
-class CourseResponse(CourseBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-
-# Enrollment Schemas
-class EnrollmentCreate(BaseModel):
-    student_id: int
-    course_id: int
-
-
-class EnrollmentResponse(BaseModel):
-    id: int
-    student_id: int
-    course_id: int
-    enrolled_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-
-# Course Content Schemas
-class CourseContentBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=255)
-    content: str = Field(..., min_length=1)
-    content_type: str = Field(default="text", max_length=50)
-    order: int = Field(default=0, ge=0)
-
-
-class CourseContentCreate(CourseContentBase):
-    course_id: int
-
-
-class CourseContentUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=255)
-    content: Optional[str] = Field(None, min_length=1)
-    content_type: Optional[str] = Field(None, max_length=50)
-    order: Optional[int] = Field(None, ge=0)
-
-
-class CourseContentResponse(CourseContentBase):
-    id: int
-    course_id: int
-    created_at: datetime
-    updated_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-
-# Translation Schemas
-class TranslationRequest(BaseModel):
-    text: str = Field(..., min_length=1)
-    source_language: str = Field(..., min_length=2, max_length=50)
-    target_language: str = Field(..., min_length=2, max_length=50)
-
-
-class TranslationResponse(BaseModel):
-    original_text: str
-    translated_text: str
-    source_language: str
-    target_language: str
-
-
-class ContentTranslationCreate(BaseModel):
-    content_id: int
-    language: str = Field(..., min_length=2, max_length=50)
-    translated_title: str = Field(..., min_length=1, max_length=255)
-    translated_content: str = Field(..., min_length=1)
-
-
-class ContentTranslationResponse(BaseModel):
-    id: int
-    content_id: int
-    language: str
-    translated_title: str
-    translated_content: str
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

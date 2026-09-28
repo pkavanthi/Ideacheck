@@ -1,5 +1,5 @@
+import enum
 from datetime import datetime
-from enum import Enum as PyEnum
 
 from sqlalchemy import (
     Column,
@@ -10,72 +10,105 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    Boolean,
 )
-from sqlalchemy.orm import declarative_base, relationship
-
-Base = declarative_base()
+from sqlalchemy.orm import DeclarativeBase, relationship
 
 
-class HazardType(str, PyEnum):
-    FLOOD = "flood"
-    CYCLONE = "cyclone"
-    EARTHQUAKE = "earthquake"
-    DROUGHT = "drought"
-    HEATWAVE = "heatwave"
-    OTHER = "other"
+class Base(DeclarativeBase):
+    pass
 
 
-class AlertSeverity(str, PyEnum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
-
-
-class AlertStatus(str, PyEnum):
+class FarmerStatus(str, enum.Enum):
     ACTIVE = "active"
-    RESOLVED = "resolved"
+    INACTIVE = "inactive"
+    SUSPENDED = "suspended"
+
+
+class BondStatus(str, enum.Enum):
+    PENDING = "pending"
+    VERIFIED = "verified"
+    ACTIVE = "active"
+    REDEEMED = "redeemed"
     CANCELLED = "cancelled"
 
 
-class District(Base):
-    __tablename__ = "districts"
+class Farmer(Base):
+    __tablename__ = "farmers"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False, index=True)
+    name = Column(String(200), nullable=False)
+    phone = Column(String(20), unique=True, nullable=False, index=True)
+    village = Column(String(200), nullable=False)
+    district = Column(String(200), nullable=False)
     state = Column(String(100), nullable=False)
-    district_code = Column(String(20), unique=True, nullable=False, index=True)
-    population = Column(Integer, nullable=True)
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-    collector_name = Column(String(150), nullable=True)
-    collector_contact = Column(String(50), nullable=True)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    land_area_acres = Column(Float, nullable=False)
+    crop_type = Column(String(100), nullable=False)
+    fpo_id = Column(Integer, ForeignKey("fpos.id"), nullable=True)
+    status = Column(Enum(FarmerStatus), default=FarmerStatus.ACTIVE, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    alerts = relationship("Alert", back_populates="district", cascade="all, delete-orphan")
+    fpo = relationship("FPO", back_populates="farmers")
+    bonds = relationship("Bond", back_populates="farmer")
 
 
-class Alert(Base):
-    __tablename__ = "alerts"
+class FPO(Base):
+    """Farmer Producer Organisation"""
+
+    __tablename__ = "fpos"
 
     id = Column(Integer, primary_key=True, index=True)
-    district_id = Column(Integer, ForeignKey("districts.id"), nullable=False, index=True)
-    title = Column(String(200), nullable=False)
-    description = Column(Text, nullable=True)
-    hazard_type = Column(Enum(HazardType), nullable=False)
-    severity = Column(Enum(AlertSeverity), nullable=False, default=AlertSeverity.MEDIUM)
-    status = Column(Enum(AlertStatus), nullable=False, default=AlertStatus.ACTIVE)
-    affected_population = Column(Integer, nullable=True)
-    evacuation_required = Column(Boolean, default=False)
-    evacuation_zones = Column(Text, nullable=True)  # JSON string of zone names
-    issued_by = Column(String(150), nullable=True)
-    issued_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, nullable=True)
-    resolved_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    name = Column(String(300), nullable=False)
+    registration_number = Column(String(100), unique=True, nullable=False, index=True)
+    treasurer_name = Column(String(200), nullable=False)
+    treasurer_phone = Column(String(20), nullable=False)
+    district = Column(String(200), nullable=False)
+    state = Column(String(100), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    district = relationship("District", back_populates="alerts")
+    farmers = relationship("Farmer", back_populates="fpo")
+
+
+class Bond(Base):
+    """Harvest-backed rural bond"""
+
+    __tablename__ = "bonds"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farmer_id = Column(Integer, ForeignKey("farmers.id"), nullable=False, index=True)
+    # Harvest fraction details
+    crop_type = Column(String(100), nullable=False)
+    harvest_quantity_kg = Column(Float, nullable=False)
+    harvest_fraction = Column(Float, nullable=False)  # 0.0 – 1.0 fraction of harvest
+    # Financial details
+    face_value = Column(Float, nullable=False)  # INR
+    issued_capital = Column(Float, nullable=True)  # INR actually disbursed
+    interest_rate_pct = Column(Float, nullable=False)
+    maturity_date = Column(DateTime, nullable=False)
+    # Provenance & verification
+    verifier_name = Column(String(200), nullable=True)
+    verification_notes = Column(Text, nullable=True)
+    buyer_id = Column(Integer, ForeignKey("buyers.id"), nullable=True, index=True)
+    status = Column(Enum(BondStatus), default=BondStatus.PENDING, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    farmer = relationship("Farmer", back_populates="bonds")
+    buyer = relationship("Buyer", back_populates="bonds")
+
+
+class Buyer(Base):
+    """Institutional agri-buyer"""
+
+    __tablename__ = "buyers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(300), nullable=False)
+    organisation = Column(String(300), nullable=False)
+    phone = Column(String(20), nullable=False)
+    email = Column(String(254), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    bonds = relationship("Bond", back_populates="buyer")

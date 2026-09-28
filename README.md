@@ -1,59 +1,56 @@
-# StormSense AI
+# Rural Bond Exchange
 
-**National intelligence backbone for multi-hazard disaster response.**  
-StormSense AI federates district nodes to deliver predictive resilience across 1.4 billion citizens.
+A rural bond exchange platform that enables smallholder horticulture farmers to convert verified harvest fractions into immediate capital, eliminating intermediary lenders from village-level agricultural credit.
 
----
-
-## Target Users
+## Target Audience
 
 | Persona | Role |
 |---|---|
-| District Collector | Authorizes evacuation orders |
-| NDRF Field Commander | Executes ground operations |
-| Vulnerable Community Resident | Receives alerts and evacuation guidance |
+| Smallholder horticulture farmers | Create harvest-backed bonds to access credit |
+| FPO treasurers | Manage FPO membership and surplus savings |
+| Institutional agri-buyers | Browse and purchase bonds with verifiable produce provenance |
 
----
+## Technology Stack
 
-## Core Features
+- **Runtime**: Python 3.11+
+- **Framework**: FastAPI
+- **ORM**: SQLAlchemy 2.x
+- **Validation**: Pydantic v2
+- **Database**: SQLite (dev) / PostgreSQL (prod)
+- **Migrations**: Alembic
+- **Server**: Uvicorn
 
-- **District Management** — Full CRUD for 780+ district nodes (name, state, collector, geo-coordinates)
-- **Alert Management** — Issue, track, and resolve multi-hazard alerts (flood, cyclone, earthquake, drought, heatwave)
-- **Evacuation Tracking** — Flag evacuation-required alerts with zone information and affected population counts
+## Architecture
 
----
+Modular Monolith with clear separation of concerns:
 
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Backend | Python 3.11 + FastAPI |
-| ORM | SQLAlchemy 2.x |
-| Validation | Pydantic v2 |
-| Database | SQLite (dev) / PostgreSQL (prod) |
-| Migrations | Alembic |
-| Server | Uvicorn |
-
----
+```
+backend/
+├── main.py          # FastAPI application entrypoint
+├── config.py        # Settings via pydantic-settings
+├── database.py      # Engine, session factory, table creation
+├── models.py        # SQLAlchemy ORM models
+├── schemas.py       # Pydantic request/response schemas
+└── routers/
+    ├── bonds.py     # Bond CRUD endpoints
+    └── farmers.py   # Farmer, FPO, and Buyer CRUD endpoints
+```
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.11 or higher
 - pip
-
----
 
 ## Installation
 
 ```bash
 # 1. Clone the repository
 git clone <repo-url>
-cd stormsense-ai
+cd rural-bond-exchange
 
 # 2. Create and activate a virtual environment
 python -m venv .venv
-source .venv/bin/activate        # macOS / Linux
-# .venv\Scripts\activate         # Windows
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 
 # 3. Install dependencies
 pip install -r backend/requirements.txt
@@ -63,64 +60,71 @@ cp .env.example .env
 # Edit .env as needed
 ```
 
----
-
-## Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `DEBUG` | `false` | Enable debug logging |
-| `DATABASE_URL` | `sqlite:///./stormsense.db` | SQLAlchemy database URL |
-| `SECRET_KEY` | *(required in prod)* | JWT signing secret |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Token lifetime |
-| `ALLOWED_ORIGINS` | `http://localhost:3000` | Comma-separated CORS origins |
-
----
-
 ## Running Locally
 
 ```bash
-# From the project root
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The database tables are created automatically on first startup.
+Interactive API docs will be available at:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc:       http://localhost:8000/redoc
 
-Interactive API docs available at:
-- Swagger UI → http://localhost:8000/api/v1/docs
-- ReDoc → http://localhost:8000/api/v1/redoc
+## Environment Variables
 
----
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `APP_NAME` | No | `Rural Bond Exchange` | Application display name |
+| `APP_VERSION` | No | `1.0.0` | Semantic version |
+| `DEBUG` | No | `false` | Enable debug mode |
+| `DATABASE_URL` | Yes | `sqlite:///./rural_bond_exchange.db` | SQLAlchemy database URL |
+| `SECRET_KEY` | Yes | — | JWT signing secret (change in production) |
+| `ALGORITHM` | No | `HS256` | JWT algorithm |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | No | `1440` | Token lifetime in minutes |
+| `ALLOWED_ORIGINS` | No | `["http://localhost:3000"]` | CORS allowed origins (JSON array) |
 
 ## API Endpoints
 
 ### Health
-
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/v1/health` | Service health check |
+| GET | `/health` | Health check |
 
-### Districts
-
+### Farmers `/api/v1/farmers`
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/v1/districts/` | Create a district |
-| GET | `/api/v1/districts/` | List all districts (filter by `state`, `is_active`) |
-| GET | `/api/v1/districts/{id}` | Get a district |
-| PATCH | `/api/v1/districts/{id}` | Update a district |
-| DELETE | `/api/v1/districts/{id}` | Delete a district |
+| POST | `/` | Register a new farmer |
+| GET | `/` | List farmers (filterable by `district`) |
+| GET | `/{farmer_id}` | Get farmer by ID |
+| PATCH | `/{farmer_id}` | Update farmer |
+| DELETE | `/{farmer_id}` | Delete farmer |
 
-### Alerts
-
+### FPOs `/api/v1/fpos`
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/v1/alerts/` | Issue a new alert |
-| GET | `/api/v1/alerts/` | List alerts (filter by `district_id`, `hazard_type`, `severity`, `status`) |
-| GET | `/api/v1/alerts/{id}` | Get an alert |
-| PATCH | `/api/v1/alerts/{id}` | Update / resolve an alert |
-| DELETE | `/api/v1/alerts/{id}` | Delete an alert |
+| POST | `/` | Create a new FPO |
+| GET | `/` | List FPOs |
+| GET | `/{fpo_id}` | Get FPO by ID |
+| PATCH | `/{fpo_id}` | Update FPO |
+| DELETE | `/{fpo_id}` | Delete FPO |
 
----
+### Buyers `/api/v1/buyers`
+| Method | Path | Description |
+|---|---|---|
+| POST | `/` | Register a new buyer |
+| GET | `/` | List buyers |
+| GET | `/{buyer_id}` | Get buyer by ID |
+| PATCH | `/{buyer_id}` | Update buyer |
+| DELETE | `/{buyer_id}` | Delete buyer |
+
+### Bonds `/api/v1/bonds`
+| Method | Path | Description |
+|---|---|---|
+| POST | `/` | Issue a new harvest bond |
+| GET | `/` | List bonds (filterable by `status`) |
+| GET | `/{bond_id}` | Get bond by ID |
+| PATCH | `/{bond_id}` | Update bond (verify, assign buyer, etc.) |
+| DELETE | `/{bond_id}` | Delete pending/cancelled bond |
 
 ## Database Migrations (Alembic)
 
@@ -128,38 +132,18 @@ Interactive API docs available at:
 # Initialise Alembic (first time only)
 alembic init alembic
 
-# Generate a migration after model changes
-alembic revision --autogenerate -m "describe change"
+# Edit alembic/env.py to import Base from backend.models and set target_metadata
+
+# Generate a migration
+alembic revision --autogenerate -m "initial schema"
 
 # Apply migrations
 alembic upgrade head
 ```
 
----
+## Core Features Implemented
 
-## Architecture
-
-```
-stormsense-ai/
-├── backend/
-│   ├── main.py          # FastAPI app, middleware, router registration
-│   ├── database.py      # SQLAlchemy engine + session factory
-│   ├── models.py        # ORM models: District, Alert
-│   ├── config.py        # Settings loaded from environment
-│   └── routers/
-│       ├── districts.py # District CRUD endpoints
-│       └── alerts.py    # Alert CRUD endpoints
-├── .env.example         # Environment variable template
-└── README.md
-```
-
-The application follows a **Modular Monolith** pattern — a single deployable unit with clearly separated modules (routing, models, configuration, database).
-
----
-
-## Production Notes
-
-- Switch `DATABASE_URL` to a PostgreSQL connection string.
-- Set a strong, unique `SECRET_KEY`.
-- Set `DEBUG=false`.
-- Run behind a reverse proxy (nginx / Caddy) with TLS termination.
+- **Farmer management** — register, update, deactivate smallholder farmers linked to FPOs
+- **FPO management** — create and manage Farmer Producer Organisations
+- **Buyer management** — register institutional agri-buyers
+- **Harvest bond CRUD** — issue bonds backed by a verified harvest fraction; update verification status, assign buyers, and track lifecycle (`pending → verified → active → redeemed`)
