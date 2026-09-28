@@ -4,25 +4,23 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # Application
-    APP_NAME: str = "Rural Bond Exchange"
-    APP_VERSION: str = "1.0.0"
-    DEBUG: bool = False
+    app_name: str = "Disaster Resilience Platform"
+    app_version: str = "1.0.0"
+    debug: bool = False
 
     # Database
-    DATABASE_URL: str = "sqlite:///./rural_bond_exchange.db"
+    database_url: str = os.getenv("DATABASE_URL", "sqlite:///./disaster_resilience.db")
 
     # Security
-    SECRET_KEY: str = "change-me-in-production"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
+    secret_key: str = os.getenv("SECRET_KEY", "change-me-in-production")
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
 
     # CORS
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8080"]
+    allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:8080"]
 
     class Config:
         env_file = ".env"
-        case_sensitive = True
 
 
 @lru_cache()

@@ -1,24 +1,20 @@
-# Rural Bond Exchange
+# Disaster Resilience Platform
 
-A rural bond exchange platform that enables smallholder horticulture farmers to convert verified harvest fractions into immediate capital, eliminating intermediary lenders from village-level agricultural credit.
+> A continuously learning, multi-hazard intelligence layer that enables communities to **outrun disasters rather than react to them.**
 
 ## Target Audience
 
 | Persona | Role |
-|---|---|
-| Smallholder horticulture farmers | Create harvest-backed bonds to access credit |
-| FPO treasurers | Manage FPO membership and surplus savings |
-| Institutional agri-buyers | Browse and purchase bonds with verifiable produce provenance |
+|---------|------|
+| Government disaster-management officers | District & state-level planning |
+| NDRF field commanders | Field deployment and resource coordination |
+| Hospital emergency coordinators | Medical resource allocation |
 
-## Technology Stack
+## Features Implemented
 
-- **Runtime**: Python 3.11+
-- **Framework**: FastAPI
-- **ORM**: SQLAlchemy 2.x
-- **Validation**: Pydantic v2
-- **Database**: SQLite (dev) / PostgreSQL (prod)
-- **Migrations**: Alembic
-- **Server**: Uvicorn
+- **Incident management** — Create, read, update, and delete disaster incidents with hazard type, severity, location (lat/lon), district, and state
+- **Resource deployments** — Track NDRF teams, hospitals, and equipment deployed per incident
+- **Filtering** — Filter incidents by state, district, severity, status, and hazard type
 
 ## Architecture
 
@@ -26,38 +22,49 @@ Modular Monolith with clear separation of concerns:
 
 ```
 backend/
-├── main.py          # FastAPI application entrypoint
-├── config.py        # Settings via pydantic-settings
-├── database.py      # Engine, session factory, table creation
-├── models.py        # SQLAlchemy ORM models
-├── schemas.py       # Pydantic request/response schemas
+├── main.py          # FastAPI application entry point
+├── config.py        # Settings via pydantic-settings + .env
+├── models.py        # SQLAlchemy ORM models + DB session
 └── routers/
-    ├── bonds.py     # Bond CRUD endpoints
-    └── farmers.py   # Farmer, FPO, and Buyer CRUD endpoints
+    ├── incidents.py # /api/v1/incidents  CRUD
+    └── resources.py # /api/v1/incidents/{id}/resources  CRUD
+README.md
+.env.example
 ```
+
+## Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| Backend framework | FastAPI ≥ 0.110 |
+| ORM | SQLAlchemy ≥ 2.0 |
+| Validation | Pydantic ≥ 2.6 |
+| Database (dev) | SQLite |
+| Database (prod) | PostgreSQL (swap `DATABASE_URL`) |
+| Migrations | Alembic |
+| Server | Uvicorn |
 
 ## Prerequisites
 
-- Python 3.11 or higher
+- Python ≥ 3.11
 - pip
 
 ## Installation
 
 ```bash
-# 1. Clone the repository
-git clone <repo-url>
-cd rural-bond-exchange
+# 1. Clone / enter project directory
+cd <project-root>
 
 # 2. Create and activate a virtual environment
 python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
 
 # 3. Install dependencies
 pip install -r backend/requirements.txt
 
-# 4. Configure environment variables
+# 4. Configure environment
 cp .env.example .env
-# Edit .env as needed
+# Edit .env and set SECRET_KEY to a long random value
 ```
 
 ## Running Locally
@@ -66,84 +73,71 @@ cp .env.example .env
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Interactive API docs will be available at:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc:       http://localhost:8000/redoc
+The API will be available at `http://localhost:8000`.  
+Interactive docs: `http://localhost:8000/docs`
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `APP_NAME` | No | `Rural Bond Exchange` | Application display name |
-| `APP_VERSION` | No | `1.0.0` | Semantic version |
-| `DEBUG` | No | `false` | Enable debug mode |
-| `DATABASE_URL` | Yes | `sqlite:///./rural_bond_exchange.db` | SQLAlchemy database URL |
-| `SECRET_KEY` | Yes | — | JWT signing secret (change in production) |
-| `ALGORITHM` | No | `HS256` | JWT algorithm |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | No | `1440` | Token lifetime in minutes |
-| `ALLOWED_ORIGINS` | No | `["http://localhost:3000"]` | CORS allowed origins (JSON array) |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | SQLAlchemy database URL | `sqlite:///./disaster_resilience.db` |
+| `SECRET_KEY` | JWT signing key — **change in production** | `change-me-in-production` |
+| `ALGORITHM` | JWT algorithm | `HS256` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime | `60` |
+| `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:3000,...` |
+| `DEBUG` | Enable debug mode | `false` |
 
 ## API Endpoints
 
+### Incidents
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/incidents/` | Report a new incident |
+| `GET` | `/api/v1/incidents/` | List incidents (supports filters) |
+| `GET` | `/api/v1/incidents/{id}` | Get a single incident |
+| `PATCH` | `/api/v1/incidents/{id}` | Update an incident |
+| `DELETE` | `/api/v1/incidents/{id}` | Delete an incident |
+
+**Query filters for `GET /incidents/`:** `state`, `district`, `severity`, `status`, `hazard_type`, `skip`, `limit`
+
+### Resource Deployments
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/incidents/{id}/resources/` | Deploy a resource |
+| `GET` | `/api/v1/incidents/{id}/resources/` | List resources for incident |
+| `GET` | `/api/v1/incidents/{id}/resources/{rid}` | Get a single resource |
+| `PATCH` | `/api/v1/incidents/{id}/resources/{rid}` | Update a resource |
+| `DELETE` | `/api/v1/incidents/{id}/resources/{rid}` | Remove a resource |
+
 ### Health
-| Method | Path | Description |
-|---|---|---|
-| GET | `/health` | Health check |
 
-### Farmers `/api/v1/farmers`
 | Method | Path | Description |
-|---|---|---|
-| POST | `/` | Register a new farmer |
-| GET | `/` | List farmers (filterable by `district`) |
-| GET | `/{farmer_id}` | Get farmer by ID |
-| PATCH | `/{farmer_id}` | Update farmer |
-| DELETE | `/{farmer_id}` | Delete farmer |
-
-### FPOs `/api/v1/fpos`
-| Method | Path | Description |
-|---|---|---|
-| POST | `/` | Create a new FPO |
-| GET | `/` | List FPOs |
-| GET | `/{fpo_id}` | Get FPO by ID |
-| PATCH | `/{fpo_id}` | Update FPO |
-| DELETE | `/{fpo_id}` | Delete FPO |
-
-### Buyers `/api/v1/buyers`
-| Method | Path | Description |
-|---|---|---|
-| POST | `/` | Register a new buyer |
-| GET | `/` | List buyers |
-| GET | `/{buyer_id}` | Get buyer by ID |
-| PATCH | `/{buyer_id}` | Update buyer |
-| DELETE | `/{buyer_id}` | Delete buyer |
-
-### Bonds `/api/v1/bonds`
-| Method | Path | Description |
-|---|---|---|
-| POST | `/` | Issue a new harvest bond |
-| GET | `/` | List bonds (filterable by `status`) |
-| GET | `/{bond_id}` | Get bond by ID |
-| PATCH | `/{bond_id}` | Update bond (verify, assign buyer, etc.) |
-| DELETE | `/{bond_id}` | Delete pending/cancelled bond |
+|--------|------|-------------|
+| `GET` | `/health` | Liveness check |
 
 ## Database Migrations (Alembic)
 
 ```bash
-# Initialise Alembic (first time only)
+# Initialise (first time)
 alembic init alembic
 
-# Edit alembic/env.py to import Base from backend.models and set target_metadata
-
 # Generate a migration
-alembic revision --autogenerate -m "initial schema"
+alembic revision --autogenerate -m "initial"
 
 # Apply migrations
 alembic upgrade head
 ```
 
-## Core Features Implemented
+## Deployment Guide
 
-- **Farmer management** — register, update, deactivate smallholder farmers linked to FPOs
-- **FPO management** — create and manage Farmer Producer Organisations
-- **Buyer management** — register institutional agri-buyers
-- **Harvest bond CRUD** — issue bonds backed by a verified harvest fraction; update verification status, assign buyers, and track lifecycle (`pending → verified → active → redeemed`)
+1. Set `DATABASE_URL` to a PostgreSQL connection string.
+2. Set a strong `SECRET_KEY`.
+3. Set `ALLOWED_ORIGINS` to your frontend domain(s).
+4. Set `DEBUG=false`.
+5. Run with a production ASGI server:
+
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
+```

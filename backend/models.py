@@ -1,114 +1,94 @@
-import enum
 from datetime import datetime
+from enum import Enum
 
 from sqlalchemy import (
     Column,
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Integer,
     String,
     Text,
+    create_engine,
 )
-from sqlalchemy.orm import DeclarativeBase, relationship
+from sqlalchemy.orm import DeclarativeBase, relationship, sessionmaker
+
+from backend.config import get_settings
+
+settings = get_settings()
+
+engine = create_engine(
+    settings.database_url,
+    connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 class Base(DeclarativeBase):
     pass
 
 
-class FarmerStatus(str, enum.Enum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    SUSPENDED = "suspended"
+class SeverityLevel(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
 
 
-class BondStatus(str, enum.Enum):
-    PENDING = "pending"
-    VERIFIED = "verified"
-    ACTIVE = "active"
-    REDEEMED = "redeemed"
-    CANCELLED = "cancelled"
+class IncidentStatus(str, Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    RESOLVED = "resolved"
+    CLOSED = "closed"
 
 
-class Farmer(Base):
-    __tablename__ = "farmers"
+class Incident(Base):
+    """Disaster incident reported by field or district officers."""
+
+    __tablename__ = "incidents"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(200), nullable=False)
-    phone = Column(String(20), unique=True, nullable=False, index=True)
-    village = Column(String(200), nullable=False)
-    district = Column(String(200), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    hazard_type = Column(String(100), nullable=False)  # flood, earthquake, cyclone, etc.
+    severity = Column(String(20), default=SeverityLevel.MEDIUM, nullable=False)
+    status = Column(String(20), default=IncidentStatus.OPEN, nullable=False)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    district = Column(String(100), nullable=False)
     state = Column(String(100), nullable=False)
-    land_area_acres = Column(Float, nullable=False)
-    crop_type = Column(String(100), nullable=False)
-    fpo_id = Column(Integer, ForeignKey("fpos.id"), nullable=True)
-    status = Column(Enum(FarmerStatus), default=FarmerStatus.ACTIVE, nullable=False)
+    reported_by = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    fpo = relationship("FPO", back_populates="farmers")
-    bonds = relationship("Bond", back_populates="farmer")
+    resources = relationship("ResourceDeployment", back_populates="incident", cascade="all, delete-orphan")
 
 
-class FPO(Base):
-    """Farmer Producer Organisation"""
+class ResourceDeployment(Base):
+    """Resources (NDRF teams, hospitals, equipment) deployed for an incident."""
 
-    __tablename__ = "fpos"
+    __tablename__ = "resource_deployments"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(300), nullable=False)
-    registration_number = Column(String(100), unique=True, nullable=False, index=True)
-    treasurer_name = Column(String(200), nullable=False)
-    treasurer_phone = Column(String(20), nullable=False)
-    district = Column(String(200), nullable=False)
-    state = Column(String(100), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False)
+    resource_type = Column(String(100), nullable=False)  # ndrf_team, hospital, equipment
+    resource_name = Column(String(255), nullable=False)
+    quantity = Column(Integer, default=1, nullable=False)
+    deployed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    notes = Column(Text, nullable=True)
 
-    farmers = relationship("Farmer", back_populates="fpo")
+    incident = relationship("Incident", back_populates="resources")
 
 
-class Bond(Base):
-    """Harvest-backed rural bond"""
-
-    __tablename__ = "bonds"
-
-    id = Column(Integer, primary_key=True, index=True)
-    farmer_id = Column(Integer, ForeignKey("farmers.id"), nullable=False, index=True)
-    # Harvest fraction details
-    crop_type = Column(String(100), nullable=False)
-    harvest_quantity_kg = Column(Float, nullable=False)
-    harvest_fraction = Column(Float, nullable=False)  # 0.0 – 1.0 fraction of harvest
-    # Financial details
-    face_value = Column(Float, nullable=False)  # INR
-    issued_capital = Column(Float, nullable=True)  # INR actually disbursed
-    interest_rate_pct = Column(Float, nullable=False)
-    maturity_date = Column(DateTime, nullable=False)
-    # Provenance & verification
-    verifier_name = Column(String(200), nullable=True)
-    verification_notes = Column(Text, nullable=True)
-    buyer_id = Column(Integer, ForeignKey("buyers.id"), nullable=True, index=True)
-    status = Column(Enum(BondStatus), default=BondStatus.PENDING, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    farmer = relationship("Farmer", back_populates="bonds")
-    buyer = relationship("Buyer", back_populates="bonds")
+def get_db():
+    """Dependency that provides a database session."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
-class Buyer(Base):
-    """Institutional agri-buyer"""
-
-    __tablename__ = "buyers"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(300), nullable=False)
-    organisation = Column(String(300), nullable=False)
-    phone = Column(String(20), nullable=False)
-    email = Column(String(254), unique=True, nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    bonds = relationship("Bond", back_populates="buyer")
+def init_db():
+    """Create all tables in the database."""
+    Base.metadata.create_all(bind=engine)
