@@ -1,40 +1,34 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 import logging
 
-from backend.config import settings
-from backend.database import engine, Base
-from backend.routers import courses, students, translations
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-# Configure logging
+from backend.config import settings
+from backend.database import engine
+from backend.models import Base
+from backend.routers import alerts, districts
+
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG if settings.DEBUG else logging.INFO,
+    format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan events"""
-    # Startup
-    logger.info("Creating database tables...")
-    Base.metadata.create_all(bind=engine)
-    logger.info("Application startup complete")
-    yield
-    # Shutdown
-    logger.info("Application shutdown")
-
+# Create all database tables on startup
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Universal Learning Platform API",
-    description="API for language-accessible education platform",
-    version="1.0.0",
-    lifespan=lifespan
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    description=(
+        "StormSense AI — national intelligence backbone for multi-hazard disaster response. "
+        "Federating district nodes to deliver predictive resilience across 1.4 billion citizens."
+    ),
+    docs_url=f"{settings.API_PREFIX}/docs",
+    redoc_url=f"{settings.API_PREFIX}/redoc",
+    openapi_url=f"{settings.API_PREFIX}/openapi.json",
 )
 
-# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -43,23 +37,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(courses.router, prefix="/api/v1/courses", tags=["courses"])
-app.include_router(students.router, prefix="/api/v1/students", tags=["students"])
-app.include_router(translations.router, prefix="/api/v1/translations", tags=["translations"])
+app.include_router(districts.router, prefix=settings.API_PREFIX)
+app.include_router(alerts.router, prefix=settings.API_PREFIX)
 
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "message": "Universal Learning Platform API",
-        "version": "1.0.0",
-        "status": "operational"
-    }
-
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
+@app.get(f"{settings.API_PREFIX}/health", tags=["health"])
+def health_check():
+    return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}

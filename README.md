@@ -1,185 +1,165 @@
-# Universal Learning Platform
+# StormSense AI
 
-A universal learning platform where language is never a barrier to education, enabling every student worldwide to access quality instruction in their native language.
+**National intelligence backbone for multi-hazard disaster response.**  
+StormSense AI federates district nodes to deliver predictive resilience across 1.4 billion citizens.
 
-## Product Vision
+---
 
-To create a universal learning platform where language is never a barrier to education, enabling every student worldwide to access quality instruction in their native language and fostering truly inclusive, equitable educational environments.
+## Target Users
 
-## Target Audience
+| Persona | Role |
+|---|---|
+| District Collector | Authorizes evacuation orders |
+| NDRF Field Commander | Executes ground operations |
+| Vulnerable Community Resident | Receives alerts and evacuation guidance |
 
-- **International university students** with varying language proficiencies
-- **Professors** teaching diverse classrooms
-- **Educational administrators** seeking to improve institutional accessibility and reduce dropout rates among non-native speakers
+---
 
 ## Core Features
 
-- **Student Management**: Create, read, update, and delete student profiles with language preferences
-- **Course Management**: Manage courses with multilingual support
-- **Content Translation**: Translate course content into multiple languages
-- **Enrollment System**: Enroll students in courses and track their progress
+- **District Management** — Full CRUD for 780+ district nodes (name, state, collector, geo-coordinates)
+- **Alert Management** — Issue, track, and resolve multi-hazard alerts (flood, cyclone, earthquake, drought, heatwave)
+- **Evacuation Tracking** — Flag evacuation-required alerts with zone information and affected population counts
 
-## Technology Stack
+---
 
-- **Backend Framework**: FastAPI (Python)
-- **Database**: SQLite (easily upgradeable to PostgreSQL)
-- **ORM**: SQLAlchemy
-- **Data Validation**: Pydantic
-- **Architecture**: Modular Monolith
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.11 + FastAPI |
+| ORM | SQLAlchemy 2.x |
+| Validation | Pydantic v2 |
+| Database | SQLite (dev) / PostgreSQL (prod) |
+| Migrations | Alembic |
+| Server | Uvicorn |
+
+---
 
 ## Prerequisites
 
-- Python 3.8 or higher
-- pip (Python package manager)
+- Python 3.11+
+- pip
+
+---
 
 ## Installation
 
-1. **Clone the repository** (or navigate to the project directory)
+```bash
+# 1. Clone the repository
+git clone <repo-url>
+cd stormsense-ai
 
-2. **Create a virtual environment**:
-   ```bash
-   python -m venv venv
-   ```
+# 2. Create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate        # macOS / Linux
+# .venv\Scripts\activate         # Windows
 
-3. **Activate the virtual environment**:
-   - On Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
-   - On macOS/Linux:
-     ```bash
-     source venv/bin/activate
-     ```
+# 3. Install dependencies
+pip install -r backend/requirements.txt
 
-4. **Install dependencies**:
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
+# 4. Configure environment variables
+cp .env.example .env
+# Edit .env as needed
+```
 
-5. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` file and update the configuration values as needed.
+---
 
-## Running the Application
+## Environment Variables
 
-1. **Start the development server**:
-   ```bash
-   uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-   ```
+| Variable | Default | Description |
+|---|---|---|
+| `DEBUG` | `false` | Enable debug logging |
+| `DATABASE_URL` | `sqlite:///./stormsense.db` | SQLAlchemy database URL |
+| `SECRET_KEY` | *(required in prod)* | JWT signing secret |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Token lifetime |
+| `ALLOWED_ORIGINS` | `http://localhost:3000` | Comma-separated CORS origins |
 
-2. **Access the application**:
-   - API: http://localhost:8000
-   - Interactive API Documentation (Swagger UI): http://localhost:8000/docs
-   - Alternative API Documentation (ReDoc): http://localhost:8000/redoc
+---
+
+## Running Locally
+
+```bash
+# From the project root
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The database tables are created automatically on first startup.
+
+Interactive API docs available at:
+- Swagger UI → http://localhost:8000/api/v1/docs
+- ReDoc → http://localhost:8000/api/v1/redoc
+
+---
 
 ## API Endpoints
 
-### Students
-- `POST /api/v1/students/` - Create a new student
-- `GET /api/v1/students/` - Get all students
-- `GET /api/v1/students/{student_id}` - Get a specific student
-- `PUT /api/v1/students/{student_id}` - Update a student
-- `DELETE /api/v1/students/{student_id}` - Delete a student
+### Health
 
-### Courses
-- `POST /api/v1/courses/` - Create a new course
-- `GET /api/v1/courses/` - Get all courses
-- `GET /api/v1/courses/{course_id}` - Get a specific course
-- `PUT /api/v1/courses/{course_id}` - Update a course
-- `DELETE /api/v1/courses/{course_id}` - Delete a course
-- `POST /api/v1/courses/{course_id}/enroll` - Enroll a student in a course
-- `POST /api/v1/courses/{course_id}/content` - Create course content
-- `GET /api/v1/courses/{course_id}/content` - Get all content for a course
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/v1/health` | Service health check |
 
-### Translations
-- `POST /api/v1/translations/translate` - Translate text (placeholder implementation)
-- `POST /api/v1/translations/content` - Create a content translation
-- `GET /api/v1/translations/content/{content_id}` - Get all translations for content
-- `GET /api/v1/translations/content/{content_id}/language/{language}` - Get translation by language
-- `DELETE /api/v1/translations/content/{translation_id}` - Delete a translation
+### Districts
 
-## Project Structure
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/v1/districts/` | Create a district |
+| GET | `/api/v1/districts/` | List all districts (filter by `state`, `is_active`) |
+| GET | `/api/v1/districts/{id}` | Get a district |
+| PATCH | `/api/v1/districts/{id}` | Update a district |
+| DELETE | `/api/v1/districts/{id}` | Delete a district |
+
+### Alerts
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/v1/alerts/` | Issue a new alert |
+| GET | `/api/v1/alerts/` | List alerts (filter by `district_id`, `hazard_type`, `severity`, `status`) |
+| GET | `/api/v1/alerts/{id}` | Get an alert |
+| PATCH | `/api/v1/alerts/{id}` | Update / resolve an alert |
+| DELETE | `/api/v1/alerts/{id}` | Delete an alert |
+
+---
+
+## Database Migrations (Alembic)
+
+```bash
+# Initialise Alembic (first time only)
+alembic init alembic
+
+# Generate a migration after model changes
+alembic revision --autogenerate -m "describe change"
+
+# Apply migrations
+alembic upgrade head
+```
+
+---
+
+## Architecture
 
 ```
-.
+stormsense-ai/
 ├── backend/
-│   ├── __init__.py
-│   ├── main.py              # Main application entry point
-│   ├── config.py            # Configuration management
-│   ├── database.py          # Database connection and session
-│   ├── models.py            # SQLAlchemy database models
-│   ├── schemas.py           # Pydantic schemas for validation
-│   ├── requirements.txt     # Python dependencies
-│   └── routers/             # API route handlers
-│       ├── __init__.py
-│       ├── students.py      # Student endpoints
-│       ├── courses.py       # Course endpoints
-│       └── translations.py  # Translation endpoints
-├── .env.example             # Example environment variables
-└── README.md                # This file
+│   ├── main.py          # FastAPI app, middleware, router registration
+│   ├── database.py      # SQLAlchemy engine + session factory
+│   ├── models.py        # ORM models: District, Alert
+│   ├── config.py        # Settings loaded from environment
+│   └── routers/
+│       ├── districts.py # District CRUD endpoints
+│       └── alerts.py    # Alert CRUD endpoints
+├── .env.example         # Environment variable template
+└── README.md
 ```
 
-## Database Models
+The application follows a **Modular Monolith** pattern — a single deployable unit with clearly separated modules (routing, models, configuration, database).
 
-### Student
-- Email, full name, native language, preferred language
-- Relationships: enrollments
+---
 
-### Course
-- Title, description, original language, instructor name
-- Relationships: enrollments, content items
+## Production Notes
 
-### Enrollment
-- Links students to courses
-- Tracks enrollment date
-
-### CourseContent
-- Course materials (text, video, audio)
-- Relationships: translations
-
-### ContentTranslation
-- Translated versions of course content
-- Supports multiple languages per content item
-
-## Development
-
-### Adding New Features
-
-1. Create new models in `backend/models.py`
-2. Create corresponding schemas in `backend/schemas.py`
-3. Create router in `backend/routers/`
-4. Register router in `backend/main.py`
-
-### Database Migrations
-
-The application automatically creates tables on startup. For production, consider using Alembic for proper database migrations.
-
-## Security Considerations
-
-- Change `SECRET_KEY` in `.env` to a strong random string in production
-- Use PostgreSQL or MySQL instead of SQLite for production
-- Implement proper authentication and authorization
-- Enable HTTPS in production
-- Configure CORS appropriately for your frontend domain
-- Implement rate limiting for API endpoints
-
-## Future Enhancements
-
-- Integration with translation APIs (Google Translate, DeepL)
-- Real-time translation during lectures
-- Video/audio content translation
-- User authentication and authorization
-- Progress tracking and analytics
-- Mobile application
-- Advanced search and filtering
-- Notification system
-
-## License
-
-This project is part of an educational initiative to make learning accessible to all students regardless of language barriers.
-
-## Support
-
-For questions or issues, please contact the development team or create an issue in the project repository.
+- Switch `DATABASE_URL` to a PostgreSQL connection string.
+- Set a strong, unique `SECRET_KEY`.
+- Set `DEBUG=false`.
+- Run behind a reverse proxy (nginx / Caddy) with TLS termination.
