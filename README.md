@@ -1,143 +1,167 @@
-# Disaster Resilience Platform
+# Rural India Village Health Monitor
 
-> A continuously learning, multi-hazard intelligence layer that enables communities to **outrun disasters rather than react to them.**
+> **Vision:** Make every rural Indian village health-legible so that no healthcare gap goes undetected and no community remains underserved — through the power of open data and AI.
+
+---
 
 ## Target Audience
 
 | Persona | Role |
-|---------|------|
-| Government disaster-management officers | District & state-level planning |
-| NDRF field commanders | Field deployment and resource coordination |
-| Hospital emergency coordinators | Medical resource allocation |
+|---|---|
+| District Health Officers | Monitor district-wide health coverage and detect underserved areas |
+| PHC Doctors | Record and review health observations at Primary Health Centre level |
+| ASHA Workers | Submit ground-level health reports from individual villages |
+| State NHM Administrators | Track state-level health programme performance |
+| National Policy Planners | Analyse aggregated data for policy decisions |
 
-## Features Implemented
+---
 
-- **Incident management** — Create, read, update, and delete disaster incidents with hazard type, severity, location (lat/lon), district, and state
-- **Resource deployments** — Track NDRF teams, hospitals, and equipment deployed per incident
-- **Filtering** — Filter incidents by state, district, severity, status, and hazard type
+## Core Features
 
-## Architecture
+- **Village Registry** — Full CRUD for village entities (name, district, state, coordinates, PHC linkage)
+- **Health Records** — Categorised health observations per village (maternal health, immunisation, nutrition, disease outbreak, sanitation)
+- **Gap Detection** — Flag `is_gap_detected` on any record; aggregate gap summary endpoint surfaces highest-need villages
+- **ASHA Worker Registry** — Track field workers assigned to villages
 
-Modular Monolith with clear separation of concerns:
-
-```
-backend/
-├── main.py          # FastAPI application entry point
-├── config.py        # Settings via pydantic-settings + .env
-├── models.py        # SQLAlchemy ORM models + DB session
-└── routers/
-    ├── incidents.py # /api/v1/incidents  CRUD
-    └── resources.py # /api/v1/incidents/{id}/resources  CRUD
-README.md
-.env.example
-```
+---
 
 ## Technology Stack
 
 | Layer | Technology |
-|-------|------------|
-| Backend framework | FastAPI ≥ 0.110 |
-| ORM | SQLAlchemy ≥ 2.0 |
-| Validation | Pydantic ≥ 2.6 |
+|---|---|
+| API Framework | FastAPI 0.111 |
+| ORM | SQLAlchemy 2.0 |
+| Validation | Pydantic v2 |
 | Database (dev) | SQLite |
 | Database (prod) | PostgreSQL (swap `DATABASE_URL`) |
-| Migrations | Alembic |
 | Server | Uvicorn |
+
+**Architecture:** Modular Monolith — routes, models, database, and config are separate modules inside a single deployable unit.
+
+---
 
 ## Prerequisites
 
-- Python ≥ 3.11
+- Python 3.11+
 - pip
 
-## Installation
+---
+
+## Installation & Local Run
 
 ```bash
-# 1. Clone / enter project directory
-cd <project-root>
+# 1. Clone the repository
+git clone <repo-url>
+cd <repo-root>
 
 # 2. Create and activate a virtual environment
 python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 
 # 3. Install dependencies
 pip install -r backend/requirements.txt
 
-# 4. Configure environment
+# 4. Configure environment variables
 cp .env.example .env
-# Edit .env and set SECRET_KEY to a long random value
-```
+# Edit .env as needed (DATABASE_URL, SECRET_KEY, etc.)
 
-## Running Locally
-
-```bash
+# 5. Run the development server
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at `http://localhost:8000`.  
-Interactive docs: `http://localhost:8000/docs`
+The API will be available at **http://localhost:8000**
+
+- Interactive docs: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+- Health check: http://localhost:8000/health
+
+---
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | SQLAlchemy database URL | `sqlite:///./disaster_resilience.db` |
-| `SECRET_KEY` | JWT signing key — **change in production** | `change-me-in-production` |
-| `ALGORITHM` | JWT algorithm | `HS256` |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime | `60` |
-| `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:3000,...` |
-| `DEBUG` | Enable debug mode | `false` |
+| Variable | Default | Description |
+|---|---|---|
+| `APP_NAME` | `Rural India Village Health Monitor` | Application display name |
+| `APP_VERSION` | `1.0.0` | API version string |
+| `DEBUG` | `false` | Enable SQLAlchemy query logging |
+| `LOG_LEVEL` | `INFO` | Python logging level |
+| `DATABASE_URL` | `sqlite:///./health_monitor.db` | SQLAlchemy database URL |
+| `SECRET_KEY` | *(required)* | JWT signing secret — **change in production** |
+| `ALGORITHM` | `HS256` | JWT algorithm |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `480` | Token TTL in minutes |
+| `ALLOWED_ORIGINS` | `["http://localhost:3000",...]` | CORS allowed origins (JSON list) |
+
+---
 
 ## API Endpoints
 
-### Incidents
-
+### System
 | Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/incidents/` | Report a new incident |
-| `GET` | `/api/v1/incidents/` | List incidents (supports filters) |
-| `GET` | `/api/v1/incidents/{id}` | Get a single incident |
-| `PATCH` | `/api/v1/incidents/{id}` | Update an incident |
-| `DELETE` | `/api/v1/incidents/{id}` | Delete an incident |
+|---|---|---|
+| `GET` | `/health` | Health check |
+| `GET` | `/` | Root info |
 
-**Query filters for `GET /incidents/`:** `state`, `district`, `severity`, `status`, `hazard_type`, `skip`, `limit`
-
-### Resource Deployments
-
+### Villages `/api/v1/villages`
 | Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/incidents/{id}/resources/` | Deploy a resource |
-| `GET` | `/api/v1/incidents/{id}/resources/` | List resources for incident |
-| `GET` | `/api/v1/incidents/{id}/resources/{rid}` | Get a single resource |
-| `PATCH` | `/api/v1/incidents/{id}/resources/{rid}` | Update a resource |
-| `DELETE` | `/api/v1/incidents/{id}/resources/{rid}` | Remove a resource |
+|---|---|---|
+| `GET` | `/api/v1/villages/` | List villages (supports `search`, `state`, `district`, pagination) |
+| `POST` | `/api/v1/villages/` | Create a village |
+| `GET` | `/api/v1/villages/{id}` | Get village by ID |
+| `PATCH` | `/api/v1/villages/{id}` | Update village fields |
+| `DELETE` | `/api/v1/villages/{id}` | Delete village |
 
-### Health
-
+### Health Records `/api/v1/health-records`
 | Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Liveness check |
+|---|---|---|
+| `GET` | `/api/v1/health-records/` | List records (filter by `village_id`, `category`, `is_gap_detected`) |
+| `POST` | `/api/v1/health-records/` | Create a health record |
+| `GET` | `/api/v1/health-records/{id}` | Get record by ID |
+| `PATCH` | `/api/v1/health-records/{id}` | Update record fields |
+| `DELETE` | `/api/v1/health-records/{id}` | Delete record |
+| `GET` | `/api/v1/health-records/summary/gaps` | Top villages by gap count |
 
-## Database Migrations (Alembic)
+#### Valid Health Record Categories
+`maternal_health` · `immunisation` · `nutrition` · `disease_outbreak` · `sanitation` · `other`
 
-```bash
-# Initialise (first time)
-alembic init alembic
+---
 
-# Generate a migration
-alembic revision --autogenerate -m "initial"
+## Project Structure
 
-# Apply migrations
-alembic upgrade head
+```
+.
+├── backend/
+│   ├── __init__.py
+│   ├── main.py          # FastAPI app, middleware, router registration
+│   ├── config.py        # Settings via pydantic-settings
+│   ├── database.py      # SQLAlchemy engine + session factory
+│   ├── models.py        # ORM models: Village, ASHAWorker, HealthRecord
+│   ├── requirements.txt # Python dependencies
+│   └── routers/
+│       ├── __init__.py
+│       ├── villages.py  # Village CRUD endpoints
+│       └── health.py    # Health record CRUD + gap summary
+├── .env.example         # Environment variable template
+└── README.md
 ```
 
-## Deployment Guide
+---
 
-1. Set `DATABASE_URL` to a PostgreSQL connection string.
-2. Set a strong `SECRET_KEY`.
-3. Set `ALLOWED_ORIGINS` to your frontend domain(s).
-4. Set `DEBUG=false`.
-5. Run with a production ASGI server:
+## Switching to PostgreSQL
+
+1. Install the driver: `pip install psycopg2-binary`
+2. Set `DATABASE_URL` in `.env`:
+   ```
+   DATABASE_URL=postgresql://user:password@localhost:5432/health_monitor
+   ```
+3. Restart the server — SQLAlchemy will create tables automatically on startup.
+
+---
+
+## Running Tests
 
 ```bash
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
+pip install pytest httpx
+pytest backend/tests/
 ```
+
+*(Test files are not included in the MVP; add them under `backend/tests/` as needed.)*

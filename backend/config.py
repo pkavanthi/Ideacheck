@@ -4,25 +4,25 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    app_name: str = "Disaster Resilience Platform"
-    app_version: str = "1.0.0"
-    debug: bool = False
+    APP_NAME: str = "Rural India Village Health Monitor"
+    APP_VERSION: str = "1.0.0"
+    DEBUG: bool = False
 
-    # Database
-    database_url: str = os.getenv("DATABASE_URL", "sqlite:///./disaster_resilience.db")
+    DATABASE_URL: str = "sqlite:///./health_monitor.db"
 
-    # Security
-    secret_key: str = os.getenv("SECRET_KEY", "change-me-in-production")
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    SECRET_KEY: str = "change-me-in-production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 8  # 8 hours
 
-    # CORS
-    allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:8080"]
+    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
+
+    LOG_LEVEL: str = "INFO"
 
     class Config:
         env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     return Settings()
