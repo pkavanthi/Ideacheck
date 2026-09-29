@@ -1,162 +1,65 @@
-from datetime import datetime
+from pydantic import BaseModel, Field
 from typing import Optional
+from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, field_validator
+class IncidentBase(BaseModel):
+    title: str = Field(..., example="Flash flood warning in Aluva")
+    district: str = Field(..., example="Ernakulam")
+    location_name: str = Field(..., example="Aluva River Basin")
+    latitude: float = Field(..., example=10.1076)
+    longitude: float = Field(..., example=76.3516)
+    threat_level: str = Field(default="HIGH", example="HIGH")
+    status: str = Field(default="ACTIVE", example="ACTIVE")
+    description: Optional[str] = Field(None, example="Water level crossed warning mark")
+    affected_population: int = Field(default=0, example=1500)
 
-from backend.models import BondStatus, FarmerStatus
-
-
-# ---------------------------------------------------------------------------
-# Farmer schemas
-# ---------------------------------------------------------------------------
-
-class FarmerBase(BaseModel):
-    name: str
-    phone: str
-    village: str
-    district: str
-    state: str
-    land_area_acres: float
-    crop_type: str
-    fpo_id: Optional[int] = None
-
-
-class FarmerCreate(FarmerBase):
+class IncidentCreate(IncidentBase):
     pass
 
-
-class FarmerUpdate(BaseModel):
-    name: Optional[str] = None
-    phone: Optional[str] = None
-    village: Optional[str] = None
+class IncidentUpdate(BaseModel):
+    title: Optional[str] = None
     district: Optional[str] = None
-    state: Optional[str] = None
-    land_area_acres: Optional[float] = None
-    crop_type: Optional[str] = None
-    fpo_id: Optional[int] = None
-    status: Optional[FarmerStatus] = None
+    location_name: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    threat_level: Optional[str] = None
+    status: Optional[str] = None
+    description: Optional[str] = None
+    affected_population: Optional[int] = None
 
-
-class FarmerOut(FarmerBase):
+class IncidentResponse(IncidentBase):
     id: int
-    status: FarmerStatus
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True
 
+class ResourceBase(BaseModel):
+    name: str = Field(..., example="Inflatable Rescue Boats")
+    resource_type: str = Field(default="RESCUE_BOAT", example="RESCUE_BOAT")
+    district: str = Field(..., example="Ernakulam")
+    quantity: int = Field(..., example=25)
+    available_quantity: int = Field(..., example=20)
+    location_hub: str = Field(..., example="Kochi Central Relief Depot")
+    status: str = Field(default="AVAILABLE", example="AVAILABLE")
 
-# ---------------------------------------------------------------------------
-# FPO schemas
-# ---------------------------------------------------------------------------
-
-class FPOBase(BaseModel):
-    name: str
-    registration_number: str
-    treasurer_name: str
-    treasurer_phone: str
-    district: str
-    state: str
-
-
-class FPOCreate(FPOBase):
+class ResourceCreate(ResourceBase):
     pass
 
-
-class FPOUpdate(BaseModel):
+class ResourceUpdate(BaseModel):
     name: Optional[str] = None
-    treasurer_name: Optional[str] = None
-    treasurer_phone: Optional[str] = None
+    resource_type: Optional[str] = None
     district: Optional[str] = None
-    state: Optional[str] = None
+    quantity: Optional[int] = None
+    available_quantity: Optional[int] = None
+    location_hub: Optional[str] = None
+    status: Optional[str] = None
 
-
-class FPOOut(FPOBase):
+class ResourceResponse(ResourceBase):
     id: int
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime
 
-    model_config = {"from_attributes": True}
-
-
-# ---------------------------------------------------------------------------
-# Bond schemas
-# ---------------------------------------------------------------------------
-
-class BondBase(BaseModel):
-    farmer_id: int
-    crop_type: str
-    harvest_quantity_kg: float
-    harvest_fraction: float
-    face_value: float
-    interest_rate_pct: float
-    maturity_date: datetime
-
-    @field_validator("harvest_fraction")
-    @classmethod
-    def fraction_range(cls, v: float) -> float:
-        if not 0.0 < v <= 1.0:
-            raise ValueError("harvest_fraction must be between 0 (exclusive) and 1 (inclusive)")
-        return v
-
-    @field_validator("face_value", "harvest_quantity_kg")
-    @classmethod
-    def positive_value(cls, v: float) -> float:
-        if v <= 0:
-            raise ValueError("Value must be positive")
-        return v
-
-
-class BondCreate(BondBase):
-    pass
-
-
-class BondUpdate(BaseModel):
-    verifier_name: Optional[str] = None
-    verification_notes: Optional[str] = None
-    issued_capital: Optional[float] = None
-    buyer_id: Optional[int] = None
-    status: Optional[BondStatus] = None
-
-
-class BondOut(BondBase):
-    id: int
-    issued_capital: Optional[float] = None
-    verifier_name: Optional[str] = None
-    verification_notes: Optional[str] = None
-    buyer_id: Optional[int] = None
-    status: BondStatus
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    model_config = {"from_attributes": True}
-
-
-# ---------------------------------------------------------------------------
-# Buyer schemas
-# ---------------------------------------------------------------------------
-
-class BuyerBase(BaseModel):
-    name: str
-    organisation: str
-    phone: str
-    email: EmailStr
-
-
-class BuyerCreate(BuyerBase):
-    pass
-
-
-class BuyerUpdate(BaseModel):
-    name: Optional[str] = None
-    organisation: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[EmailStr] = None
-
-
-class BuyerOut(BuyerBase):
-    id: int
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True
