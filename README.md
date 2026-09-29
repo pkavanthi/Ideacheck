@@ -1,6 +1,6 @@
-# Rural India Village Health Monitor
+# GUARDIAN — Disaster Response Operations Platform
 
-> **Vision:** Make every rural Indian village health-legible so that no healthcare gap goes undetected and no community remains underserved — through the power of open data and AI.
+> **Transforms disaster response from a reactive scramble into a proactive, data-driven operation** where every critical decision in the 24–48 hour imminent-threat window is backed by a live, unified operational picture.
 
 ---
 
@@ -8,20 +8,17 @@
 
 | Persona | Role |
 |---|---|
-| District Health Officers | Monitor district-wide health coverage and detect underserved areas |
-| PHC Doctors | Record and review health observations at Primary Health Centre level |
-| ASHA Workers | Submit ground-level health reports from individual villages |
-| State NHM Administrators | Track state-level health programme performance |
-| National Policy Planners | Analyse aggregated data for policy decisions |
+| District Emergency Managers | Oversee all district-level response activities |
+| Field Relief Coordinators | Deploy and track resources in the field |
+| State Disaster Authority Analysts | Cross-district situational awareness & analytics |
 
 ---
 
 ## Core Features
 
-- **Village Registry** — Full CRUD for village entities (name, district, state, coordinates, PHC linkage)
-- **Health Records** — Categorised health observations per village (maternal health, immunisation, nutrition, disease outbreak, sanitation)
-- **Gap Detection** — Flag `is_gap_detected` on any record; aggregate gap summary endpoint surfaces highest-need villages
-- **ASHA Worker Registry** — Track field workers assigned to villages
+- **Incident Management** — Report, track, update, and resolve disaster incidents with severity and geo-coordinates.
+- **Resource Registry** — Maintain an inventory of personnel, vehicles, equipment, medical supplies, food, water, and shelter.
+- **Resource Deployment** — Deploy resources to incidents, track quantities, and automatically update availability.
 
 ---
 
@@ -29,30 +26,27 @@
 
 | Layer | Technology |
 |---|---|
-| API Framework | FastAPI 0.111 |
+| Backend | Python 3.11+, FastAPI 0.111 |
 | ORM | SQLAlchemy 2.0 |
 | Validation | Pydantic v2 |
-| Database (dev) | SQLite |
-| Database (prod) | PostgreSQL (swap `DATABASE_URL`) |
-| Server | Uvicorn |
-
-**Architecture:** Modular Monolith — routes, models, database, and config are separate modules inside a single deployable unit.
+| Database | SQLite (dev) / PostgreSQL (prod) |
+| Server | Uvicorn (ASGI) |
 
 ---
 
 ## Prerequisites
 
-- Python 3.11+
-- pip
+- Python 3.11 or later
+- `pip` / `venv`
 
 ---
 
-## Installation & Local Run
+## Installation & Local Setup
 
 ```bash
 # 1. Clone the repository
 git clone <repo-url>
-cd <repo-root>
+cd guardian
 
 # 2. Create and activate a virtual environment
 python -m venv .venv
@@ -63,17 +57,14 @@ pip install -r backend/requirements.txt
 
 # 4. Configure environment variables
 cp .env.example .env
-# Edit .env as needed (DATABASE_URL, SECRET_KEY, etc.)
+# Edit .env and set SECRET_KEY and DATABASE_URL as needed
 
 # 5. Run the development server
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at **http://localhost:8000**
-
-- Interactive docs: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-- Health check: http://localhost:8000/health
+The API will be available at **http://localhost:8000**.  
+Interactive docs: **http://localhost:8000/docs**
 
 ---
 
@@ -81,87 +72,93 @@ The API will be available at **http://localhost:8000**
 
 | Variable | Default | Description |
 |---|---|---|
-| `APP_NAME` | `Rural India Village Health Monitor` | Application display name |
+| `APP_NAME` | `GUARDIAN` | Application display name |
 | `APP_VERSION` | `1.0.0` | API version string |
 | `DEBUG` | `false` | Enable SQLAlchemy query logging |
-| `LOG_LEVEL` | `INFO` | Python logging level |
-| `DATABASE_URL` | `sqlite:///./health_monitor.db` | SQLAlchemy database URL |
-| `SECRET_KEY` | *(required)* | JWT signing secret — **change in production** |
-| `ALGORITHM` | `HS256` | JWT algorithm |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `480` | Token TTL in minutes |
-| `ALLOWED_ORIGINS` | `["http://localhost:3000",...]` | CORS allowed origins (JSON list) |
+| `SECRET_KEY` | *(required)* | Secret used for JWT signing |
+| `DATABASE_URL` | `sqlite:///./guardian.db` | SQLAlchemy database URL |
+| `ALLOWED_ORIGINS` | `http://localhost:3000,...` | Comma-separated CORS origins |
+| `JWT_ALGORITHM` | `HS256` | JWT signing algorithm |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `480` | Token lifetime (minutes) |
 
 ---
 
 ## API Endpoints
 
-### System
+### Health
+
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/health` | Health check |
-| `GET` | `/` | Root info |
+| GET | `/health` | Liveness check |
 
-### Villages `/api/v1/villages`
+### Incidents  (`/api/v1/incidents`)
+
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/v1/villages/` | List villages (supports `search`, `state`, `district`, pagination) |
-| `POST` | `/api/v1/villages/` | Create a village |
-| `GET` | `/api/v1/villages/{id}` | Get village by ID |
-| `PATCH` | `/api/v1/villages/{id}` | Update village fields |
-| `DELETE` | `/api/v1/villages/{id}` | Delete village |
+| GET | `/api/v1/incidents/` | List incidents (filterable by `severity`, `status`) |
+| POST | `/api/v1/incidents/` | Report a new incident |
+| GET | `/api/v1/incidents/{id}` | Get incident details |
+| PUT | `/api/v1/incidents/{id}` | Update an incident |
+| DELETE | `/api/v1/incidents/{id}` | Delete an incident |
 
-### Health Records `/api/v1/health-records`
+### Resources  (`/api/v1/resources`)
+
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/v1/health-records/` | List records (filter by `village_id`, `category`, `is_gap_detected`) |
-| `POST` | `/api/v1/health-records/` | Create a health record |
-| `GET` | `/api/v1/health-records/{id}` | Get record by ID |
-| `PATCH` | `/api/v1/health-records/{id}` | Update record fields |
-| `DELETE` | `/api/v1/health-records/{id}` | Delete record |
-| `GET` | `/api/v1/health-records/summary/gaps` | Top villages by gap count |
-
-#### Valid Health Record Categories
-`maternal_health` · `immunisation` · `nutrition` · `disease_outbreak` · `sanitation` · `other`
+| GET | `/api/v1/resources/` | List resources (filterable by `resource_type`, `status`) |
+| POST | `/api/v1/resources/` | Register a new resource |
+| GET | `/api/v1/resources/{id}` | Get resource details |
+| PUT | `/api/v1/resources/{id}` | Update a resource |
+| DELETE | `/api/v1/resources/{id}` | Delete a resource |
+| POST | `/api/v1/resources/deployments/incident/{incident_id}` | Deploy a resource to an incident |
 
 ---
 
-## Project Structure
+## Architecture Overview
 
 ```
-.
-├── backend/
-│   ├── __init__.py
-│   ├── main.py          # FastAPI app, middleware, router registration
-│   ├── config.py        # Settings via pydantic-settings
-│   ├── database.py      # SQLAlchemy engine + session factory
-│   ├── models.py        # ORM models: Village, ASHAWorker, HealthRecord
-│   ├── requirements.txt # Python dependencies
-│   └── routers/
-│       ├── __init__.py
-│       ├── villages.py  # Village CRUD endpoints
-│       └── health.py    # Health record CRUD + gap summary
-├── .env.example         # Environment variable template
-└── README.md
+backend/
+├── main.py          # FastAPI app factory, CORS, startup hooks
+├── config.py        # Pydantic-settings configuration
+├── database.py      # SQLAlchemy engine, session factory, init_db()
+├── models.py        # ORM models: Incident, Resource, ResourceDeployment
+└── routers/
+    ├── incidents.py # Incident CRUD endpoints + Pydantic schemas
+    └── resources.py # Resource CRUD + deployment endpoints + schemas
+```
+
+The application follows a **Modular Monolith** pattern:
+- Each domain (incidents, resources) owns its router, schemas, and business logic.
+- All modules share a single SQLite/PostgreSQL database.
+- Clear boundaries make it straightforward to extract services later.
+
+---
+
+## Running with PostgreSQL
+
+```bash
+# Install the psycopg2 driver
+pip install psycopg2-binary
+
+# Update DATABASE_URL in .env
+DATABASE_URL=postgresql://guardian_user:password@localhost:5432/guardian_db
 ```
 
 ---
 
-## Switching to PostgreSQL
-
-1. Install the driver: `pip install psycopg2-binary`
-2. Set `DATABASE_URL` in `.env`:
-   ```
-   DATABASE_URL=postgresql://user:password@localhost:5432/health_monitor
-   ```
-3. Restart the server — SQLAlchemy will create tables automatically on startup.
-
----
-
-## Running Tests
+## Testing
 
 ```bash
 pip install pytest httpx
 pytest backend/tests/
 ```
 
-*(Test files are not included in the MVP; add them under `backend/tests/` as needed.)*
+---
+
+## Deployment
+
+For production, replace SQLite with PostgreSQL, set `DEBUG=false`, and run behind a reverse proxy (Nginx / Caddy):
+
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
+```

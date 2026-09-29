@@ -4,136 +4,193 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from backend.models import Incident, ResourceDeployment, get_db
+from backend.database import get_db
+from backend.models import Resource, ResourceDeployment, ResourceStatus, ResourceType
 
-router = APIRouter(prefix="/incidents/{incident_id}/resources", tags=["resources"])
+router = APIRouter(prefix="/resources", tags=["resources"])
 
 
 # ---------------------------------------------------------------------------
-# Pydantic schemas
+# Schemas
 # ---------------------------------------------------------------------------
 
 class ResourceCreate(BaseModel):
-    resource_type: str = Field(..., min_length=2, max_length=100)
-    resource_name: str = Field(..., min_length=2, max_length=255)
+    name: str = Field(..., min_length=2, max_length=255)
+    resource_type: ResourceType
     quantity: int = Field(1, ge=1)
-    notes: Optional[str] = None
+    location: Optional[str] = Field(None, max_length=500)
+    description: Optional[str] = None
+    contact_info: Optional[str] = Field(None, max_length=500)
 
 
 class ResourceUpdate(BaseModel):
-    resource_type: Optional[str] = Field(None, min_length=2, max_length=100)
-    resource_name: Optional[str] = Field(None, min_length=2, max_length=255)
-    quantity: Optional[int] = Field(None, ge=1)
-    notes: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=2, max_length=255)
+    resource_type: Optional[ResourceType] = None
+    quantity: Optional[int] = Field(None, ge=0)
+    status: Optional[ResourceStatus] = None
+    location: Optional[str] = Field(None, max_length=500)
+    description: Optional[str] = None
+    contact_info: Optional[str] = Field(None, max_length=500)
 
 
 class ResourceResponse(BaseModel):
     id: int
-    incident_id: int
-    resource_type: str
-    resource_name: str
+    name: str
+    resource_type: ResourceType
     quantity: int
-    deployed_at: str
-    notes: Optional[str]
+    status: ResourceStatus
+    location: Optional[str]
+    description: Optional[str]
+    contact_info: Optional[str]
+    created_at: str
+    updated_at: str
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
     @classmethod
-    def from_orm_model(cls, obj: ResourceDeployment) -> "ResourceResponse":
+    def from_orm_model(cls, resource: Resource) -> "ResourceResponse":
         return cls(
-            id=obj.id,
-            incident_id=obj.incident_id,
-            resource_type=obj.resource_type,
-            resource_name=obj.resource_name,
-            quantity=obj.quantity,
-            deployed_at=obj.deployed_at.isoformat(),
-            notes=obj.notes,
+            id=resource.id,
+            name=resource.name,
+            resource_type=resource.resource_type,
+            quantity=resource.quantity,
+            status=resource.status,
+            location=resource.location,
+            description=resource.description,
+            contact_info=resource.contact_info,
+            created_at=resource.created_at.isoformat(),
+            updated_at=resource.updated_at.isoformat(),
+        )
+
+
+class DeploymentCreate(BaseModel):
+    resource_id: int
+    quantity_deployed: int = Field(1, ge=1)
+    notes: Optional[str] = None
+
+
+class DeploymentResponse(BaseModel):
+    id: int
+    incident_id: int
+    resource_id: int
+    quantity_deployed: int
+    notes: Optional[str]
+    deployed_at: str
+    recalled_at: Optional[str]
+
+    model_config = {"from_attributes": True}
+
+    @classmethod
+    def from_orm_model(cls, dep: ResourceDeployment) -> "DeploymentResponse":
+        return cls(
+            id=dep.id,
+            incident_id=dep.incident_id,
+            resource_id=dep.resource_id,
+            quantity_deployed=dep.quantity_deployed,
+            notes=dep.notes,
+            deployed_at=dep.deployed_at.isoformat(),
+            recalled_at=dep.recalled_at.isoformat() if dep.recalled_at else None,
         )
 
 
 # ---------------------------------------------------------------------------
-# Helper
+# Resource CRUD endpoints
 # ---------------------------------------------------------------------------
 
-def _get_incident_or_404(incident_id: int, db: Session) -> Incident:
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    return incident
+@router.get("/", response_model=List[ResourceResponse], summary="List all resources")
+def list_resources(
+    resource_type: Optional[ResourceType] = Query(None, description="Filter by type"),
+    status: Optional[ResourceStatus] = Query(None, description="Filter by status"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Resource)
+    if resource_type:
+        query = query.filter(Resource.resource_type == resource_type)
+    if status:
+        query = query.filter(Resource.status == status)
+    resources = query.order_by(Resource.created_at.desc()).offset(skip).limit(limit).all()
+    return [ResourceResponse.from_orm_model(r) for r in resources]
 
 
-# ---------------------------------------------------------------------------
-# CRUD routes
-# ---------------------------------------------------------------------------
-
-@router.post("/", response_model=ResourceResponse, status_code=status.HTTP_201_CREATED)
-def deploy_resource(incident_id: int, payload: ResourceCreate, db: Session = Depends(get_db)):
-    """Deploy a resource to an existing incident."""
-    _get_incident_or_404(incident_id, db)
-    resource = ResourceDeployment(incident_id=incident_id, **payload.model_dump())
+@router.post("/", response_model=ResourceResponse, status_code=status.HTTP_201_CREATED, summary="Register a new resource")
+def create_resource(payload: ResourceCreate, db: Session = Depends(get_db)):
+    resource = Resource(**payload.model_dump())
     db.add(resource)
     db.commit()
     db.refresh(resource)
     return ResourceResponse.from_orm_model(resource)
 
 
-@router.get("/", response_model=List[ResourceResponse])
-def list_resources(
-    incident_id: int,
-    resource_type: Optional[str] = Query(None, description="Filter by resource type"),
-    db: Session = Depends(get_db),
-):
-    """List all resources deployed for an incident."""
-    _get_incident_or_404(incident_id, db)
-    query = db.query(ResourceDeployment).filter(ResourceDeployment.incident_id == incident_id)
-    if resource_type:
-        query = query.filter(ResourceDeployment.resource_type.ilike(f"%{resource_type}%"))
-    return [ResourceResponse.from_orm_model(r) for r in query.all()]
-
-
-@router.get("/{resource_id}", response_model=ResourceResponse)
-def get_resource(incident_id: int, resource_id: int, db: Session = Depends(get_db)):
-    """Retrieve a single resource deployment."""
-    _get_incident_or_404(incident_id, db)
-    resource = (
-        db.query(ResourceDeployment)
-        .filter(ResourceDeployment.id == resource_id, ResourceDeployment.incident_id == incident_id)
-        .first()
-    )
+@router.get("/{resource_id}", response_model=ResourceResponse, summary="Get resource details")
+def get_resource(resource_id: int, db: Session = Depends(get_db)):
+    resource = db.query(Resource).filter(Resource.id == resource_id).first()
     if not resource:
-        raise HTTPException(status_code=404, detail="Resource deployment not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
     return ResourceResponse.from_orm_model(resource)
 
 
-@router.patch("/{resource_id}", response_model=ResourceResponse)
-def update_resource(incident_id: int, resource_id: int, payload: ResourceUpdate, db: Session = Depends(get_db)):
-    """Update a resource deployment."""
-    _get_incident_or_404(incident_id, db)
-    resource = (
-        db.query(ResourceDeployment)
-        .filter(ResourceDeployment.id == resource_id, ResourceDeployment.incident_id == incident_id)
-        .first()
-    )
+@router.put("/{resource_id}", response_model=ResourceResponse, summary="Update a resource")
+def update_resource(resource_id: int, payload: ResourceUpdate, db: Session = Depends(get_db)):
+    resource = db.query(Resource).filter(Resource.id == resource_id).first()
     if not resource:
-        raise HTTPException(status_code=404, detail="Resource deployment not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(resource, field, value)
     db.commit()
     db.refresh(resource)
     return ResourceResponse.from_orm_model(resource)
 
 
-@router.delete("/{resource_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_resource(incident_id: int, resource_id: int, db: Session = Depends(get_db)):
-    """Remove a resource deployment from an incident."""
-    _get_incident_or_404(incident_id, db)
-    resource = (
-        db.query(ResourceDeployment)
-        .filter(ResourceDeployment.id == resource_id, ResourceDeployment.incident_id == incident_id)
-        .first()
-    )
+@router.delete("/{resource_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a resource")
+def delete_resource(resource_id: int, db: Session = Depends(get_db)):
+    resource = db.query(Resource).filter(Resource.id == resource_id).first()
     if not resource:
-        raise HTTPException(status_code=404, detail="Resource deployment not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
     db.delete(resource)
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Resource Deployment endpoints (nested under incidents via this router)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/deployments/incident/{incident_id}",
+    response_model=DeploymentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Deploy a resource to an incident",
+)
+def deploy_resource(incident_id: int, payload: DeploymentCreate, db: Session = Depends(get_db)):
+    from backend.models import Incident  # local import to avoid circular
+
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+
+    resource = db.query(Resource).filter(Resource.id == payload.resource_id).first()
+    if not resource:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
+
+    if resource.quantity < payload.quantity_deployed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Insufficient quantity. Available: {resource.quantity}",
+        )
+
+    deployment = ResourceDeployment(
+        incident_id=incident_id,
+        resource_id=payload.resource_id,
+        quantity_deployed=payload.quantity_deployed,
+        notes=payload.notes,
+    )
+    resource.quantity -= payload.quantity_deployed
+    if resource.quantity == 0:
+        resource.status = ResourceStatus.DEPLOYED
+
+    db.add(deployment)
+    db.commit()
+    db.refresh(deployment)
+    return DeploymentResponse.from_orm_model(deployment)
