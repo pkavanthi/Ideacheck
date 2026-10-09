@@ -1,194 +1,186 @@
-import React, { useState, useEffect } from 'react';
-import IncidentForm from './components/IncidentForm';
-import IncidentList from './components/IncidentList';
-import ResourcePanel from './components/ResourcePanel';
-import {
-  fetchIncidents,
-  createIncident,
-  updateIncident,
-  deleteIncident,
-  fetchResources,
-  createResource,
-  deleteResource,
-} from './api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+import { Dashboard } from './components/Dashboard';
+import { RisksModule } from './components/RisksModule';
+import { AlertsModule } from './components/AlertsModule';
+import { ImpactAnalytics } from './components/ImpactAnalytics';
+import { ToastContainer } from './components/Toast';
+import { api } from './services/api';
 
-export default function App() {
-  const [incidents, setIncidents] = useState([]);
-  const [resources, setResources] = useState([]);
-  const [activeTab, setActiveTab] = useState('incidents');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export function App() {
+  const [currentTab, setCurrentTab] = useState('dashboard');
+  const [risks, setRisks] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [isBackendLive, setIsBackendLive] = useState(false);
+  const [toasts, setToasts] = useState([]);
 
-  const loadData = async () => {
+  // Toast Helper
+  const addToast = useCallback((title, message, type = 'info') => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, title, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4500);
+  }, []);
+
+  const dismissToast = (id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Load all telemetry data
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const [incidentsData, resourcesData] = await Promise.all([
-        fetchIncidents(),
-        fetchResources(),
+      const health = await api.checkHealth();
+      setIsBackendLive(health.live);
+
+      const [risksData, alertsData] = await Promise.all([
+        api.getRisks(),
+        api.getAlerts({ active_only: undefined }),
       ]);
-      setIncidents(incidentsData);
-      setResources(resourcesData);
-      setError(null);
+
+      setRisks(risksData || []);
+      setAlerts(alertsData || []);
     } catch (err) {
-      setError('Failed to sync live operational picture. Please ensure backend is running.');
+      console.error('Data loading error:', err);
+      addToast('Sync Issue', 'Could not fetch latest updates. Using cached data.', 'warning');
     } finally {
       setLoading(false);
     }
-  };
+  }, [addToast]);
 
   useEffect(() => {
     loadData();
-  }, []);
+    // Periodic refresh every 30 seconds
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, [loadData]);
 
-  const handleCreateIncident = async (payload) => {
-    try {
-      const created = await createIncident(payload);
-      setIncidents((prev) => [created, ...prev]);
-    } catch (err) {
-      alert('Error creating incident');
-    }
+  // Risk Handlers
+  const handleCreateRisk = async (payload) => {
+    const created = await api.createRisk(payload);
+    setRisks((prev) => [created, ...prev]);
+    addToast('Risk Recorded', `"${created.title}" successfully added to registry.`, 'success');
+    return created;
   };
 
-  const handleUpdateStatus = async (id, status) => {
-    try {
-      const updated = await updateIncident(id, { status });
-      setIncidents((prev) =>
-        prev.map((inc) => (inc.id === id ? updated : inc))
-      );
-    } catch (err) {
-      alert('Error updating status');
-    }
+  const handleUpdateRisk = async (id, payload) => {
+    const updated = await api.updateRisk(id, payload);
+    setRisks((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    addToast('Risk Updated', `Event #${id} records have been updated.`, 'success');
+    return updated;
   };
 
-  const handleDeleteIncident = async (id) => {
-    if (!window.confirm('Confirm deletion of incident?')) return;
-    try {
-      await deleteIncident(id);
-      setIncidents((prev) => prev.filter((inc) => inc.id !== id));
-    } catch (err) {
-      alert('Error deleting incident');
-    }
+  const handleDeleteRisk = async (id) => {
+    await api.deleteRisk(id);
+    setRisks((prev) => prev.filter((r) => r.id !== id));
+    addToast('Risk Removed', `Event #${id} removed from the registry.`, 'info');
   };
 
-  const handleAddResource = async (payload) => {
-    try {
-      const created = await createResource(payload);
-      setResources((prev) => [...prev, created]);
-    } catch (err) {
-      alert('Error adding resource');
-    }
+  // Alert Handlers
+  const handleCreateAlert = async (payload) => {
+    const created = await api.createAlert(payload);
+    setAlerts((prev) => [created, ...prev]);
+    addToast('Alert Broadcasted', `Emergency siren dispatched for ${created.region}.`, 'warning');
+    return created;
   };
 
-  const handleDeleteResource = async (id) => {
-    if (!window.confirm('Confirm deletion of resource?')) return;
-    try {
-      await deleteResource(id);
-      setResources((prev) => prev.filter((res) => res.id !== id));
-    } catch (err) {
-      alert('Error deleting resource');
+  const handleUpdateAlert = async (id, payload) => {
+    const updated = await api.updateAlert(id, payload);
+    setAlerts((prev) => prev.map((a) => (a.id === id ? updated : a)));
+    if (payload.active === 0) {
+      addToast('Alert Resolved', `Emergency directive #${id} marked as stand-down.`, 'success');
+    } else {
+      addToast('Alert Updated', `Emergency directive #${id} modified.`, 'info');
     }
+    return updated;
   };
 
-  const totalAffected = incidents.reduce((sum, item) => sum + (item.affected_population || 0), 0);
-  const criticalCount = incidents.filter((i) => i.threat_level === 'CRITICAL' && i.status !== 'RESOLVED').length;
+  const handleDeleteAlert = async (id) => {
+    await api.deleteAlert(id);
+    setAlerts((prev) => prev.filter((a) => a.id !== id));
+    addToast('Alert Deleted', `Alert directive #${id} deleted.`, 'info');
+  };
+
+  // Reset demo datasets
+  const handleResetDemo = () => {
+    api.resetDemoData();
+    loadData();
+    addToast('Demo Data Restored', 'National hazard scenarios reset to factory baseline.', 'info');
+  };
+
+  const activeAlertsCount = alerts.filter((a) => a.active === 1).length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-cyan-500/30">
       {/* Top Navigation */}
-      <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-red-600 text-white font-black px-2.5 py-1 rounded text-lg tracking-wider">
-            GUARDIAN
-          </div>
-          <div>
-            <h1 className="text-base font-bold tracking-tight">Monsoon Threat Operations Center</h1>
-            <p className="text-xs text-slate-400">24–48 Hour Imminent Disaster Intelligence Feed</p>
-          </div>
-        </div>
+      <Navbar
+        isBackendLive={isBackendLive}
+        onRefresh={loadData}
+        loading={loading}
+        activeAlertsCount={activeAlertsCount}
+        onOpenCreateRisk={() => setCurrentTab('risks')}
+        onOpenCreateAlert={() => setCurrentTab('alerts')}
+      />
 
-        <div className="flex items-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping"></span>
-            <span className="text-xs text-slate-300">
-              Critical Alerts: <strong className="text-red-400">{criticalCount}</strong>
-            </span>
-          </div>
-          <div className="text-xs text-slate-300">
-            Total Est. Impacted: <strong className="text-amber-400">{totalAffected.toLocaleString()}</strong>
-          </div>
-          <button
-            onClick={loadData}
-            className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded border border-slate-700 transition"
-          >
-            Refresh Feed
-          </button>
-        </div>
-      </header>
+      {/* Main Body */}
+      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+        <Sidebar
+          currentTab={currentTab}
+          setTab={setCurrentTab}
+          onResetDemo={handleResetDemo}
+          isBackendLive={isBackendLive}
+        />
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
-        {error && (
-          <div className="bg-red-950/80 border border-red-800 text-red-200 px-4 py-3 rounded text-sm flex justify-between items-center">
-            <span>{error}</span>
-            <button onClick={loadData} className="underline text-xs">Retry</button>
-          </div>
-        )}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+          {currentTab === 'dashboard' && (
+            <Dashboard
+              risks={risks}
+              alerts={alerts}
+              onNavigateTab={setCurrentTab}
+              onOpenCreateRisk={() => setCurrentTab('risks')}
+              onOpenCreateAlert={() => setCurrentTab('alerts')}
+              onSelectRisk={(risk) => setCurrentTab('risks')}
+            />
+          )}
 
-        {/* View Toggle */}
-        <div className="flex border-b border-slate-800 gap-4">
-          <button
-            onClick={() => setActiveTab('incidents')}
-            className={`pb-2 text-sm font-semibold border-b-2 transition ${
-              activeTab === 'incidents'
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Active Incidents & Response
-          </button>
-          <button
-            onClick={() => setActiveTab('resources')}
-            className={`pb-2 text-sm font-semibold border-b-2 transition ${
-              activeTab === 'resources'
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Relief Resources & Staging
-          </button>
-        </div>
+          {currentTab === 'risks' && (
+            <RisksModule
+              risks={risks}
+              onCreateRisk={handleCreateRisk}
+              onUpdateRisk={handleUpdateRisk}
+              onDeleteRisk={handleDeleteRisk}
+              onBroadcastAlert={(risk) => setCurrentTab('alerts')}
+              loading={loading}
+            />
+          )}
 
-        {loading ? (
-          <div className="text-center py-12 text-slate-400 text-sm">Loading unified operational telemetry...</div>
-        ) : (
-          <div>
-            {activeTab === 'incidents' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-1">
-                  <IncidentForm onSubmit={handleCreateIncident} />
-                </div>
-                <div className="lg:col-span-2">
-                  <IncidentList
-                    incidents={incidents}
-                    onUpdateStatus={handleUpdateStatus}
-                    onDelete={handleDeleteIncident}
-                  />
-                </div>
-              </div>
-            ) : (
-              <ResourcePanel
-                resources={resources}
-                onAddResource={handleAddResource}
-                onDeleteResource={handleDeleteResource}
-              />
-            )}
-          </div>
-        )}
-      </main>
+          {currentTab === 'alerts' && (
+            <AlertsModule
+              alerts={alerts}
+              risks={risks}
+              onCreateAlert={handleCreateAlert}
+              onUpdateAlert={handleUpdateAlert}
+              onDeleteAlert={handleDeleteAlert}
+              loading={loading}
+            />
+          )}
 
-      <footer className="bg-slate-900 border-t border-slate-800 px-6 py-3 text-center text-xs text-slate-500">
-        GUARDIAN State Disaster Management Operational Platform &copy; 2025
-      </footer>
+          {currentTab === 'impact' && (
+            <ImpactAnalytics
+              risks={risks}
+              alerts={alerts}
+            />
+          )}
+        </main>
+      </div>
+
+      {/* Global Toast System */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
+
+export default App;

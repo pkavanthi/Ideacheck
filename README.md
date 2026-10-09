@@ -1,81 +1,131 @@
-# GUARDIAN - Disaster Response Management System
+# Unified Climate Risk Brain
 
-GUARDIAN transforms disaster response from a reactive scramble into a proactive, data-driven operation where every critical decision in the 24–48 hour imminent-threat window is backed by a live, unified operational picture.
-
-Designed for District Emergency Managers, Field Relief Coordinators, and State Disaster Authority Analysts operating during active monsoon emergencies in flood-prone regions of India.
+A national **Unified Climate Risk Brain** that tracks floods, cyclones, earthquakes and heatwaves, serving state and national disaster management authorities, emergency operations centres, rescue forces and insurers.
 
 ---
 
-## 🛠️ Technology Stack & Architecture
+## Architecture
 
-- **Architecture:** Modular Monolith
-- **Backend:** Python 3.11, FastAPI, SQLAlchemy ORM, Pydantic, Uvicorn
-- **Frontend:** React 18, Vite, TailwindCSS, Lucide Icons
-- **Database:** SQLite (default / zero-config) / PostgreSQL-ready
-- **Testing:** Pytest, HTTPX TestClient
-- **Containerization:** Docker & Docker Compose
-
----
-
-## 📁 Repository Structure
+Full-stack disaster management operations platform featuring a FastAPI backend and a high-performance React + Vite + Tailwind CSS frontend dashboard with Leaflet geospatial intelligence.
 
 ```
-.
-├── backend/
-│   ├── config.py             # Application settings & environment parsing
-│   ├── database.py           # SQLAlchemy engine & session management
-│   ├── models.py             # Database models (Incidents, Relief Resources)
-│   ├── schemas.py            # Pydantic validation & transfer schemas
-│   ├── main.py               # FastAPI entrypoint & router registry
-│   ├── routers/
-│   │   ├── incidents.py      # Incident reporting & triage CRUD routes
-│   │   └── resources.py      # Relief resource management CRUD routes
-│   ├── tests/
-│   │   └── test_api.py       # Pytest unit & integration test suite
-│   ├── requirements.txt      # Python dependencies
-│   └── Dockerfile            # Container build for backend service
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── IncidentForm.jsx
-│   │   │   ├── IncidentList.jsx
-│   │   │   └── ResourcePanel.jsx
-│   │   ├── api.js            # API client module
-│   │   ├── App.jsx           # Main React Dashboard
-│   │   ├── main.jsx          # React DOM render entry
-│   │   └── index.css         # Tailwind style directives
-│   ├── package.json          # Node dependencies & scripts
-│   ├── vite.config.js        # Vite bundler config
-│   ├── tailwind.config.js    # Tailwind styling config
-│   └── Dockerfile            # Container build for frontend UI
-├── docker-compose.yml        # Multi-container orchestration
-├── .env.example              # Example environment variables
-└── README.md                 # Setup & deployment documentation
+backend/
+├── main.py            # FastAPI application entry point
+├── config.py          # Centralised configuration (reads .env)
+├── models.py          # SQLAlchemy ORM models + DB bootstrap
+├── requirements.txt   # Python dependencies
+└── routers/
+    ├── risks.py       # /api/v1/risks  – climate risk events CRUD
+    └── alerts.py      # /api/v1/alerts – risk alerts CRUD
+frontend/
+├── src/
+│   ├── components/
+│   │   ├── Navbar.jsx         # Status banner, live sync badge, emergency broadcast CTAs
+│   │   ├── Sidebar.jsx        # Operations navigation & hazard color key
+│   │   ├── Dashboard.jsx      # Command center with KPIs, hazard charts & live ticker
+│   │   ├── GeospatialMap.jsx  # Interactive Leaflet map with hazard radius & popups
+│   │   ├── RisksModule.jsx    # Full CRUD registry for climate risk events
+│   │   ├── AlertsModule.jsx   # Emergency broadcast operations & siren resolutions
+│   │   ├── ImpactAnalytics.jsx# Parametric loss calculator & inter-agency SOP checklists
+│   │   └── Toast.jsx          # Real-time feedback alerts
+│   ├── services/
+│   │   ├── api.js             # Unified API client with automatic offline demo fallback
+│   │   └── mockData.js        # Pre-seeded national hazard scenarios & coordinates
+│   ├── App.jsx                # Layout orchestrator & state synchronization
+│   └── main.jsx               # React entry point
+├── package.json               # Frontend dependencies & scripts
+├── tailwind.config.js         # Custom hazard theme styling
+└── vite.config.js             # Vite config with backend proxy
+.env.example                   # Required environment variables
+README.md
 ```
 
 ---
 
-## 🚀 Getting Started Locally
+## Technology Stack
 
-### 1. Backend Setup
+| Layer      | Technology                        |
+|------------|-----------------------------------|
+| Runtime    | Python 3.11+                      |
+| Framework  | FastAPI 0.111                     |
+| ORM        | SQLAlchemy 2.0                    |
+| Validation | Pydantic v2                       |
+| Database   | SQLite (dev) / PostgreSQL (prod)  |
+| Server     | Uvicorn                           |
+
+---
+
+## Target Audience
+
+- State and national disaster management authorities
+- Emergency operations centres
+- Rescue forces
+- Insurers in flood-prone regions
+
+---
+
+## Core Features
+
+- **Climate Risk Events** – create, read, update and delete hazard event records (flood / cyclone / earthquake / heatwave)
+- **Risk Alerts** – issue, track and resolve active alerts per region
+- **Filtering** – list endpoints support filtering by hazard type and severity
+
+---
+
+## Prerequisites
+
+- Python **3.11** or higher
+- `pip`
+
+---
+
+## Installation
 
 ```bash
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# 1. Clone the repository
+git clone <repo-url>
+cd <repo-root>
 
-# Install dependencies
+# 2. Create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+
+# 3. Install dependencies
 pip install -r backend/requirements.txt
 
-# Run backend development server
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+# 4. Copy environment variables
+cp .env.example .env
+# Edit .env as needed
 ```
 
-The API will be available at `http://localhost:8000`
-- Interactive API Docs (Swagger): `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+---
 
-### 2. Frontend Setup
+## Environment Variables
+
+| Variable                      | Default                        | Description                                |
+|-------------------------------|--------------------------------|--------------------------------------------|
+| `APP_NAME`                    | Unified Climate Risk Brain     | Application display name                   |
+| `DEBUG`                       | `false`                        | Enable debug logging                       |
+| `DATABASE_URL`                | `sqlite:///./climate_risk.db`  | SQLAlchemy database URL                    |
+| `SECRET_KEY`                  | *(required in prod)*           | Secret used for signing tokens             |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60`                           | Token lifetime in minutes                  |
+| `CORS_ORIGINS`                | `http://localhost:3000`        | Comma-separated list of allowed origins    |
+
+---
+
+## Running Locally
+
+### 1. Start the FastAPI Backend
+
+```bash
+cd backend
+uvicorn main:app --reload --port 8000
+```
+
+The API is available at `http://localhost:8000`.
+Interactive docs: `http://localhost:8000/docs`
+
+### 2. Start the React Frontend
 
 ```bash
 cd frontend
@@ -83,45 +133,79 @@ npm install
 npm run dev
 ```
 
-The UI dashboard will be available at `http://localhost:3000`.
+The frontend application runs at `http://localhost:5173`.
+*Note: The frontend operates with an automatic graceful fallback and local storage persistence if the backend is not yet started, and synchronises seamlessly once the backend is live.*
 
 ---
 
-## 🐳 Running with Docker
+## API Endpoints
 
-Run the entire stack with Docker Compose:
+### Health
 
-```bash
-docker-compose up --build
+| Method | Path      | Description        |
+|--------|-----------|--------------------|
+| GET    | `/health` | Liveness check     |
+
+### Climate Risk Events  `/api/v1/risks`
+
+| Method | Path                  | Description                     |
+|--------|-----------------------|---------------------------------|
+| POST   | `/api/v1/risks/`      | Record a new risk event         |
+| GET    | `/api/v1/risks/`      | List events (filter-able)       |
+| GET    | `/api/v1/risks/{id}`  | Get a single event              |
+| PUT    | `/api/v1/risks/{id}`  | Update an event                 |
+| DELETE | `/api/v1/risks/{id}`  | Delete an event                 |
+
+Query parameters for `GET /api/v1/risks/`: `hazard_type`, `severity`, `skip`, `limit`
+
+### Risk Alerts  `/api/v1/alerts`
+
+| Method | Path                    | Description                      |
+|--------|-------------------------|----------------------------------|
+| POST   | `/api/v1/alerts/`       | Issue a new alert                |
+| GET    | `/api/v1/alerts/`       | List alerts (filter-able)        |
+| GET    | `/api/v1/alerts/{id}`   | Get a single alert               |
+| PUT    | `/api/v1/alerts/{id}`   | Update / resolve an alert        |
+| DELETE | `/api/v1/alerts/{id}`   | Delete an alert                  |
+
+Query parameters for `GET /api/v1/alerts/`: `hazard_type`, `active_only`, `skip`, `limit`
+
+---
+
+## Deployment Guide
+
+### PostgreSQL (production)
+
+Update `.env`:
+
+```
+DATABASE_URL=postgresql://user:password@db-host:5432/climate_risk
 ```
 
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:8000/docs`
-
----
-
-## 🧪 Running Tests
-
-Execute the backend integration and unit test suite:
+### Running with Docker (manual)
 
 ```bash
-pytest backend/tests/test_api.py -v
+# Build
+docker build -t climate-risk-brain ./backend
+
+# Run
+docker run -p 8000:8000 \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/climate_risk \
+  -e SECRET_KEY=your-secret \
+  climate-risk-brain
 ```
 
 ---
 
-## 📡 API Endpoints
+## Testing
 
-### Incidents (`/api/v1/incidents`)
-- `GET /api/v1/incidents/` - List all incidents (filterable by `district`, `threat_level`, `status_filter`)
-- `POST /api/v1/incidents/` - Log a new threat incident
-- `GET /api/v1/incidents/{id}` - Fetch single incident details
-- `PUT /api/v1/incidents/{id}` - Update incident severity, status, or details
-- `DELETE /api/v1/incidents/{id}` - Remove incident entry
+```bash
+pip install pytest httpx
+pytest backend/
+```
 
-### Relief Resources (`/api/v1/resources`)
-- `GET /api/v1/resources/` - List resources and inventory levels
-- `POST /api/v1/resources/` - Register rescue units and emergency supplies
-- `GET /api/v1/resources/{id}` - Get resource details
-- `PUT /api/v1/resources/{id}` - Update available quantities and hub location
-- `DELETE /api/v1/resources/{id}` - Decommission resource entry
+---
+
+## License
+
+MIT

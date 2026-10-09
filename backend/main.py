@@ -1,42 +1,69 @@
+import logging
+import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.config import settings
-from backend.database import Base, engine
-from backend.routers import incidents, resources
 
-# Initialize database schema
-Base.metadata.create_all(bind=engine)
+from config import settings
+from models import init_db
+from routers import alerts, risks
 
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.DEBUG if settings.DEBUG else logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Application
+# ---------------------------------------------------------------------------
 app = FastAPI(
     title=settings.APP_NAME,
-    description="GUARDIAN - Unified Operational Disaster Response API",
-    version="1.0.0",
+    version=settings.APP_VERSION,
+    description=(
+        "Unified Climate Risk Brain – tracks floods, cyclones, earthquakes and heatwaves. "
+        "Serves state and national disaster management authorities, emergency operations "
+        "centres, rescue forces and insurers."
+    ),
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
-# CORS Middleware
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins if settings.cors_origins else ["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Attach API routers
-app.include_router(incidents.router, prefix="/api/v1")
-app.include_router(resources.router, prefix="/api/v1")
+# ---------------------------------------------------------------------------
+# Startup
+# ---------------------------------------------------------------------------
+@app.on_event("startup")
+def on_startup():
+    logger.info("Initialising database tables …")
+    init_db()
+    logger.info("%s v%s started.", settings.APP_NAME, settings.APP_VERSION)
 
-@app.get("/")
-def root():
-    return {
-        "system": settings.APP_NAME,
-        "status": "OPERATIONAL",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
 
-@app.get("/health")
+# ---------------------------------------------------------------------------
+# Routers
+# ---------------------------------------------------------------------------
+app.include_router(risks.router, prefix="/api/v1")
+app.include_router(alerts.router, prefix="/api/v1")
+
+
+# ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
+@app.get("/health", tags=["Health"])
 def health():
-    return {"status": "healthy"}
+    return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}

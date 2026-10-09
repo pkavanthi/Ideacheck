@@ -1,54 +1,92 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Enum
 from datetime import datetime
-import enum
-from backend.database import Base
+from enum import Enum as PyEnum
 
-class ThreatLevel(str, enum.Enum):
-    LOW = "LOW"
-    MODERATE = "MODERATE"
-    HIGH = "HIGH"
-    CRITICAL = "CRITICAL"
+from sqlalchemy import (
+    Column, DateTime, Enum, Float, Integer, String, Text, create_engine,
+)
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-class IncidentStatus(str, enum.Enum):
-    REPORTED = "REPORTED"
-    ACTIVE = "ACTIVE"
-    CONTAINED = "CONTAINED"
-    RESOLVED = "RESOLVED"
+from config import settings
 
-class ResourceType(str, enum.Enum):
-    RESCUE_BOAT = "RESCUE_BOAT"
-    MEDICAL_KIT = "MEDICAL_KIT"
-    FOOD_RATION = "FOOD_RATION"
-    SHELTER_KIT = "SHELTER_KIT"
-    WATER_PUMP = "WATER_PUMP"
-    PERSONNEL = "PERSONNEL"
+# ---------------------------------------------------------------------------
+# Database bootstrap
+# ---------------------------------------------------------------------------
+engine = create_engine(
+    settings.DATABASE_URL,
+    connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {},
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-class Incident(Base):
-    __tablename__ = "incidents"
+
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+class HazardType(str, PyEnum):
+    FLOOD = "flood"
+    CYCLONE = "cyclone"
+    EARTHQUAKE = "earthquake"
+    HEATWAVE = "heatwave"
+
+
+class SeverityLevel(str, PyEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+# ---------------------------------------------------------------------------
+# Models
+# ---------------------------------------------------------------------------
+class ClimateRiskEvent(Base):
+    """Represents a recorded climate-risk event."""
+
+    __tablename__ = "climate_risk_events"
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
-    district = Column(String(100), nullable=False, index=True)
-    location_name = Column(String(255), nullable=False)
-    latitude = Column(Float, nullable=False)
-    longitude = Column(Float, nullable=False)
-    threat_level = Column(String(50), default=ThreatLevel.HIGH.value, nullable=False)
-    status = Column(String(50), default=IncidentStatus.ACTIVE.value, nullable=False)
+    hazard_type = Column(Enum(HazardType), nullable=False)
+    severity = Column(Enum(SeverityLevel), nullable=False)
+    location = Column(String(255), nullable=False)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     description = Column(Text, nullable=True)
-    affected_population = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    affected_population = Column(Integer, nullable=True)
+    reported_by = Column(String(255), nullable=True)  # authority / organisation
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-class ReliefResource(Base):
-    __tablename__ = "relief_resources"
+
+class RiskAlert(Base):
+    """Active alert issued by a disaster management authority."""
+
+    __tablename__ = "risk_alerts"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    resource_type = Column(String(50), default=ResourceType.RESCUE_BOAT.value, nullable=False)
-    district = Column(String(100), nullable=False, index=True)
-    quantity = Column(Integer, default=0, nullable=False)
-    available_quantity = Column(Integer, default=0, nullable=False)
-    location_hub = Column(String(255), nullable=False)
-    status = Column(String(50), default="AVAILABLE")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    event_id = Column(Integer, nullable=True)          # optional link to an event
+    hazard_type = Column(Enum(HazardType), nullable=False)
+    severity = Column(Enum(SeverityLevel), nullable=False)
+    region = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    issued_by = Column(String(255), nullable=True)
+    active = Column(Integer, default=1)                # 1 = active, 0 = resolved
+    issued_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def get_db():
+    """FastAPI dependency – yields a DB session and ensures it is closed."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def init_db():
+    """Create all tables (called once at startup)."""
+    Base.metadata.create_all(bind=engine)
