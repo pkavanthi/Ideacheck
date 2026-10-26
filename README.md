@@ -1,81 +1,15 @@
-# Unified Climate Risk Brain
+# DisasterOps API
 
-A national **Unified Climate Risk Brain** that tracks floods, cyclones, earthquakes and heatwaves, serving state and national disaster management authorities, emergency operations centres, rescue forces and insurers.
+> **Product Vision:** Make disasters anticipated rather than endured by giving every coordinator the intelligence of a full data science team.
 
----
-
-## Architecture
-
-Full-stack disaster management operations platform featuring a FastAPI backend and a high-performance React + Vite + Tailwind CSS frontend dashboard with Leaflet geospatial intelligence.
-
-```
-backend/
-├── main.py            # FastAPI application entry point
-├── config.py          # Centralised configuration (reads .env)
-├── models.py          # SQLAlchemy ORM models + DB bootstrap
-├── requirements.txt   # Python dependencies
-└── routers/
-    ├── risks.py       # /api/v1/risks  – climate risk events CRUD
-    └── alerts.py      # /api/v1/alerts – risk alerts CRUD
-frontend/
-├── src/
-│   ├── components/
-│   │   ├── Navbar.jsx         # Status banner, live sync badge, emergency broadcast CTAs
-│   │   ├── Sidebar.jsx        # Operations navigation & hazard color key
-│   │   ├── Dashboard.jsx      # Command center with KPIs, hazard charts & live ticker
-│   │   ├── GeospatialMap.jsx  # Interactive Leaflet map with hazard radius & popups
-│   │   ├── RisksModule.jsx    # Full CRUD registry for climate risk events
-│   │   ├── AlertsModule.jsx   # Emergency broadcast operations & siren resolutions
-│   │   ├── ImpactAnalytics.jsx# Parametric loss calculator & inter-agency SOP checklists
-│   │   └── Toast.jsx          # Real-time feedback alerts
-│   ├── services/
-│   │   ├── api.js             # Unified API client with automatic offline demo fallback
-│   │   └── mockData.js        # Pre-seeded national hazard scenarios & coordinates
-│   ├── App.jsx                # Layout orchestrator & state synchronization
-│   └── main.jsx               # React entry point
-├── package.json               # Frontend dependencies & scripts
-├── tailwind.config.js         # Custom hazard theme styling
-└── vite.config.js             # Vite config with backend proxy
-.env.example                   # Required environment variables
-README.md
-```
-
----
-
-## Technology Stack
-
-| Layer      | Technology                        |
-|------------|-----------------------------------|
-| Runtime    | Python 3.11+                      |
-| Framework  | FastAPI 0.111                     |
-| ORM        | SQLAlchemy 2.0                    |
-| Validation | Pydantic v2                       |
-| Database   | SQLite (dev) / PostgreSQL (prod)  |
-| Server     | Uvicorn                           |
-
----
-
-## Target Audience
-
-- State and national disaster management authorities
-- Emergency operations centres
-- Rescue forces
-- Insurers in flood-prone regions
-
----
-
-## Core Features
-
-- **Climate Risk Events** – create, read, update and delete hazard event records (flood / cyclone / earthquake / heatwave)
-- **Risk Alerts** – issue, track and resolve active alerts per region
-- **Filtering** – list endpoints support filtering by hazard type and severity
+A FastAPI-based disaster management platform for NDRF/SDMA coordinators, district administrations, and field rescue teams.
 
 ---
 
 ## Prerequisites
 
-- Python **3.11** or higher
-- `pip`
+- Python 3.11+
+- pip
 
 ---
 
@@ -84,7 +18,7 @@ README.md
 ```bash
 # 1. Clone the repository
 git clone <repo-url>
-cd <repo-root>
+cd <repo-folder>
 
 # 2. Create and activate a virtual environment
 python -m venv .venv
@@ -95,104 +29,136 @@ pip install -r backend/requirements.txt
 
 # 4. Copy environment variables
 cp .env.example .env
-# Edit .env as needed
+# Edit .env and set SECRET_KEY and DATABASE_URL
 ```
 
 ---
 
 ## Environment Variables
 
-| Variable                      | Default                        | Description                                |
-|-------------------------------|--------------------------------|--------------------------------------------|
-| `APP_NAME`                    | Unified Climate Risk Brain     | Application display name                   |
-| `DEBUG`                       | `false`                        | Enable debug logging                       |
-| `DATABASE_URL`                | `sqlite:///./climate_risk.db`  | SQLAlchemy database URL                    |
-| `SECRET_KEY`                  | *(required in prod)*           | Secret used for signing tokens             |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60`                           | Token lifetime in minutes                  |
-| `CORS_ORIGINS`                | `http://localhost:3000`        | Comma-separated list of allowed origins    |
+| Variable            | Required | Default                      | Description                            |
+|---------------------|----------|------------------------------|----------------------------------------|
+| `SECRET_KEY`        | ✅ Yes   | —                            | Secret key for JWT signing             |
+| `DATABASE_URL`      | No       | `sqlite:///./disasterops.db` | SQLAlchemy connection string           |
+| `DEBUG`             | No       | `false`                      | Enable debug mode                      |
+| `CORS_ORIGINS`      | No       | `http://localhost:3000,...`  | Comma-separated allowed origins        |
+| `JWT_EXPIRE_MINUTES`| No       | `1440`                       | JWT token lifetime in minutes          |
 
 ---
 
 ## Running Locally
 
-### 1. Start the FastAPI Backend
-
 ```bash
-cd backend
-uvicorn main:app --reload --port 8000
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API is available at `http://localhost:8000`.
-Interactive docs: `http://localhost:8000/docs`
+- **Interactive Dynamic Web UI**: [http://localhost:8000/](http://localhost:8000/)
+- **Interactive API Docs (Swagger UI)**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
-### 2. Start the React Frontend
+---
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## Dynamic Frontend Capabilities
 
-The frontend application runs at `http://localhost:5173`.
-*Note: The frontend operates with an automatic graceful fallback and local storage persistence if the backend is not yet started, and synchronises seamlessly once the backend is live.*
+- **Tactical Geospatial Map (Leaflet.js)**: Live markers color-coded by severity, radar pulse alerts for critical incidents, popups with direct status actions, and click-on-map coordinate prefill.
+- **Incident Management**: Real-time CRUD operations, status escalation workflow (`reported` → `active` → `contained` → `resolved`), severity prioritization, and multi-field filtering.
+- **Resource Inventory**: Track units, deployment statuses (`available`, `deployed`, `unavailable`), 1-click deploy/recall toggles, and contact info.
+- **Tactical Analytics (Chart.js)**: Real-time visual breakdowns of incidents by severity and status pipeline, plus resource allocation and type distributions.
+- **Auto-Sync & Telemetry**: 10-second automatic polling toggle, live UTC tactical clock, and demo seed data button for instant simulation.
 
 ---
 
 ## API Endpoints
 
 ### Health
+| Method | Path      | Description    |
+|--------|-----------|----------------|
+| GET    | `/health` | Health check   |
 
-| Method | Path      | Description        |
-|--------|-----------|--------------------|
-| GET    | `/health` | Liveness check     |
+### Incidents  `/api/v1/incidents`
+| Method | Path                   | Description                              |
+|--------|------------------------|------------------------------------------|
+| POST   | `/`                    | Report a new incident                    |
+| GET    | `/`                    | List incidents (filter by status/severity) |
+| GET    | `/{incident_id}`       | Get a single incident                    |
+| PATCH  | `/{incident_id}`       | Update incident fields                   |
+| DELETE | `/{incident_id}`       | Delete an incident                       |
 
-### Climate Risk Events  `/api/v1/risks`
+**Query params for GET /** — `status`, `severity`, `skip`, `limit`
 
-| Method | Path                  | Description                     |
-|--------|-----------------------|---------------------------------|
-| POST   | `/api/v1/risks/`      | Record a new risk event         |
-| GET    | `/api/v1/risks/`      | List events (filter-able)       |
-| GET    | `/api/v1/risks/{id}`  | Get a single event              |
-| PUT    | `/api/v1/risks/{id}`  | Update an event                 |
-| DELETE | `/api/v1/risks/{id}`  | Delete an event                 |
+### Resources  `/api/v1/resources`
+| Method | Path                   | Description                              |
+|--------|------------------------|------------------------------------------|
+| POST   | `/`                    | Register a new resource                  |
+| GET    | `/`                    | List resources (filter by status/type)   |
+| GET    | `/{resource_id}`       | Get a single resource                    |
+| PATCH  | `/{resource_id}`       | Update resource fields                   |
+| DELETE | `/{resource_id}`       | Delete a resource                        |
 
-Query parameters for `GET /api/v1/risks/`: `hazard_type`, `severity`, `skip`, `limit`
-
-### Risk Alerts  `/api/v1/alerts`
-
-| Method | Path                    | Description                      |
-|--------|-------------------------|----------------------------------|
-| POST   | `/api/v1/alerts/`       | Issue a new alert                |
-| GET    | `/api/v1/alerts/`       | List alerts (filter-able)        |
-| GET    | `/api/v1/alerts/{id}`   | Get a single alert               |
-| PUT    | `/api/v1/alerts/{id}`   | Update / resolve an alert        |
-| DELETE | `/api/v1/alerts/{id}`   | Delete an alert                  |
-
-Query parameters for `GET /api/v1/alerts/`: `hazard_type`, `active_only`, `skip`, `limit`
+**Query params for GET /** — `status`, `type`, `skip`, `limit`
 
 ---
 
-## Deployment Guide
-
-### PostgreSQL (production)
-
-Update `.env`:
+## Architecture Overview
 
 ```
-DATABASE_URL=postgresql://user:password@db-host:5432/climate_risk
+backend/
+├── main.py          # FastAPI application entry point, CORS, startup hooks
+├── config.py        # Pydantic-settings based configuration
+├── database.py      # SQLAlchemy engine, session factory, init_db()
+├── models.py        # ORM models: Incident, Resource, ResourceDeployment
+└── routers/
+    ├── incidents.py  # CRUD routes + Pydantic schemas for Incident
+    └── resources.py  # CRUD routes + Pydantic schemas for Resource
 ```
 
-### Running with Docker (manual)
+**Modular Monolith** — single deployment unit with clear module boundaries (router ↔ model ↔ config).
+
+---
+
+## Technology Stack
+
+| Layer       | Technology            | Version  |
+|-------------|-----------------------|----------|
+| Framework   | FastAPI               | 0.111.0  |
+| Server      | Uvicorn               | 0.29.0   |
+| ORM         | SQLAlchemy            | 2.0.30   |
+| Validation  | Pydantic v2           | 2.7.1    |
+| Config      | pydantic-settings     | 2.2.1    |
+| Migrations  | Alembic               | 1.13.1   |
+| Database    | SQLite (dev) / PostgreSQL (prod) | — |
+
+---
+
+## Target Audience
+
+- **NDRF / SDMA Coordinators** — manage active incidents and track resources nationally/state-wide
+- **District Administrations** — report and monitor local incidents
+- **Field Rescue Teams** — update incident status and resource availability in real time
+
+---
+
+## Core Features Implemented
+
+- ✅ **Incident CRUD** — report, list, filter, update status/severity, delete incidents
+- ✅ **Resource CRUD** — register, list, filter, update status, delete resources
+- ✅ **Resource Deployment tracking** — junction table linking resources to incidents
+- ✅ **Geo-coordinates** — latitude/longitude on incidents for map integration
+- ✅ **Filtering & pagination** — by status, severity, type on all list endpoints
+
+---
+
+## Database Migrations (Alembic)
 
 ```bash
-# Build
-docker build -t climate-risk-brain ./backend
+# Initialise (first time only)
+alembic init alembic
 
-# Run
-docker run -p 8000:8000 \
-  -e DATABASE_URL=postgresql://user:pass@host:5432/climate_risk \
-  -e SECRET_KEY=your-secret \
-  climate-risk-brain
+# Generate a migration after model changes
+alembic revision --autogenerate -m "description"
+
+# Apply migrations
+alembic upgrade head
 ```
 
 ---
@@ -201,11 +167,5 @@ docker run -p 8000:8000 \
 
 ```bash
 pip install pytest httpx
-pytest backend/
+pytest
 ```
-
----
-
-## License
-
-MIT
