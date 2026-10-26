@@ -1,32 +1,22 @@
-import os
+"""Application configuration loaded from environment variables."""
 from functools import lru_cache
-from pydantic_settings import BaseSettings
+from typing import List
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # Application
-    APP_NAME: str = "DisasterOps API"
-    APP_VERSION: str = "1.0.0"
-    DEBUG: bool = False
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "change-this-in-production")
+    app_name: str = "AegisFlow"
+    debug: bool = False
+    database_url: str = "sqlite:///./aegisflow.db"
+    # Shared secret required in the X-API-Key header. Must be set in the environment.
+    api_key: str
+    cors_origins: List[str] = ["http://localhost:3000"]
+    log_level: str = "INFO"
 
-    # Database
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", "sqlite:///./disasterops.db"
-    )
-
-    # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8080", "http://localhost:8000", "http://127.0.0.1:8000", "*"]
-
-    # JWT
-    JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     return Settings()

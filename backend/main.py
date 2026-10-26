@@ -1,69 +1,57 @@
+"""AegisFlow backend entrypoint (modular monolith, FastAPI)."""
 import logging
-from pathlib import Path
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 
-from backend.config import get_settings
-from backend.database import init_db
-from backend.routers import incidents, resources
+from config import get_settings
+from models import Base, engine
+from routers import assets, incidents
 
-# ── Logging ──────────────────────────────────────────────────────────────────
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
-)
-logger = logging.getLogger(__name__)
-
-# ── Settings ─────────────────────────────────────────────────────────────────
 settings = get_settings()
+logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger("aegisflow")
 
-# ── App ───────────────────────────────────────────────────────────────────────
-app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
-    description=(
-        "Disaster management intelligence platform. "
-        "Gives every coordinator the intelligence of a full data science team."
-    ),
-    docs_url="/docs",
-    redoc_url="/redoc",
-)
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database initialised")
+    yield
+
+
+app = FastAPI(title=settings.app_name, version="0.1.0", debug=settings.debug, lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["X-API-Key", "Content-Type"],
 )
 
-# ── Startup ───────────────────────────────────────────────────────────────────
-@app.on_event("startup")
-def on_startup():
-    logger.info("Initialising database…")
-    init_db()
-    logger.info("DisasterOps API ready — version %s", settings.APP_VERSION)
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
-# ── Routers ───────────────────────────────────────────────────────────────────
-app.include_router(incidents.router, prefix="/api/v1")
-app.include_router(resources.router, prefix="/api/v1")
-
-# ── Static Files & Frontend ──────────────────────────────────────────────────
-FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
-if FRONTEND_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
-
-    @app.get("/", include_in_schema=False)
-    def serve_frontend():
-        return FileResponse(FRONTEND_DIR / "index.html")
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
-# ── Health check ──────────────────────────────────────────────────────────────
-@app.get("/health", tags=["Health"])
+app.include_router(incidents.router)
+app.include_router(assets.router)
+
+
+@app.get("/health", tags=["health"])
 def health():
-    return {"status": "ok", "version": settings.APP_VERSION}
+    return {"status": "ok"}

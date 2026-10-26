@@ -1,65 +1,73 @@
-from pydantic import BaseModel, Field
-from typing import Optional
+"""Pydantic request/response schemas with input validation."""
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from models import AssetStatus, AssetType, HazardType, IncidentStatus, Severity
+
 
 class IncidentBase(BaseModel):
-    title: str = Field(..., example="Flash flood warning in Aluva")
-    district: str = Field(..., example="Ernakulam")
-    location_name: str = Field(..., example="Aluva River Basin")
-    latitude: float = Field(..., example=10.1076)
-    longitude: float = Field(..., example=76.3516)
-    threat_level: str = Field(default="HIGH", example="HIGH")
-    status: str = Field(default="ACTIVE", example="ACTIVE")
-    description: Optional[str] = Field(None, example="Water level crossed warning mark")
-    affected_population: int = Field(default=0, example=1500)
+    title: str = Field(min_length=3, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=5000)
+    hazard_type: HazardType
+    severity: Severity
+    status: IncidentStatus = IncidentStatus.reported
+    district: str = Field(min_length=1, max_length=120)
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+
 
 class IncidentCreate(IncidentBase):
     pass
 
-class IncidentUpdate(BaseModel):
-    title: Optional[str] = None
-    district: Optional[str] = None
-    location_name: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    threat_level: Optional[str] = None
-    status: Optional[str] = None
-    description: Optional[str] = None
-    affected_population: Optional[int] = None
 
-class IncidentResponse(IncidentBase):
+class IncidentUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=3, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=5000)
+    hazard_type: Optional[HazardType] = None
+    severity: Optional[Severity] = None
+    status: Optional[IncidentStatus] = None
+    district: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+
+
+class IncidentOut(IncidentBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
 
-class ResourceBase(BaseModel):
-    name: str = Field(..., example="Inflatable Rescue Boats")
-    resource_type: str = Field(default="RESCUE_BOAT", example="RESCUE_BOAT")
-    district: str = Field(..., example="Ernakulam")
-    quantity: int = Field(..., example=25)
-    available_quantity: int = Field(..., example=20)
-    location_hub: str = Field(..., example="Kochi Central Relief Depot")
-    status: str = Field(default="AVAILABLE", example="AVAILABLE")
+class AssetBase(BaseModel):
+    name: str = Field(min_length=2, max_length=150)
+    asset_type: AssetType
+    status: AssetStatus = AssetStatus.available
+    district: str = Field(min_length=1, max_length=120)
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+    incident_id: Optional[int] = None
 
-class ResourceCreate(ResourceBase):
+
+class AssetCreate(AssetBase):
     pass
 
-class ResourceUpdate(BaseModel):
-    name: Optional[str] = None
-    resource_type: Optional[str] = None
-    district: Optional[str] = None
-    quantity: Optional[int] = None
-    available_quantity: Optional[int] = None
-    location_hub: Optional[str] = None
-    status: Optional[str] = None
 
-class ResourceResponse(ResourceBase):
+class AssetUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=2, max_length=150)
+    asset_type: Optional[AssetType] = None
+    status: Optional[AssetStatus] = None
+    district: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+    incident_id: Optional[int] = None
+
+
+class AssetOut(AssetBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True

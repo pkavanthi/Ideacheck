@@ -1,171 +1,108 @@
-# DisasterOps API
+# AegisFlow
 
-> **Product Vision:** Make disasters anticipated rather than endured by giving every coordinator the intelligence of a full data science team.
+AegisFlow is the foundation of an autonomous disaster intelligence fabric for climate-adaptive urban governance, designed to grow into an interconnected system of drones, automated floodgates and smart grid rerouting. This MVP backend provides basic CRUD for flood/landslide **incidents** and the **assets** (rescue teams, drones, floodgates, pumps, grid nodes) assigned to them.
 
-A FastAPI-based disaster management platform for NDRF/SDMA coordinators, district administrations, and field rescue teams.
+## Target audience
 
----
+- Government emergency operations commanders
+- Municipal infrastructure managers
+- Field rescue coordinators in flood- and landslide-prone districts
+
+## Technology stack
+
+The stack was not specified, so these defaults were assumed: Python 3.11+, FastAPI, SQLAlchemy 2.0, Pydantic v2, SQLite (any SQLAlchemy URL works, e.g. PostgreSQL).
+
+## Architecture
+
+Modular monolith, single deployment unit and shared database:
+
+```
+backend/
+├── main.py            # app setup, middleware, router wiring
+├── config.py          # env-based settings
+├── models.py          # DB engine/session + Incident, Asset models
+├── schemas.py         # Pydantic validation schemas
+├── security.py        # API key authentication
+└── routers/
+    ├── incidents.py   # incident module
+    └── assets.py      # asset module
+```
 
 ## Prerequisites
 
 - Python 3.11+
-- pip
-
----
 
 ## Installation
 
 ```bash
-# 1. Clone the repository
-git clone <repo-url>
-cd <repo-folder>
-
-# 2. Create and activate a virtual environment
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r backend/requirements.txt
-
-# 4. Copy environment variables
-cp .env.example .env
-# Edit .env and set SECRET_KEY and DATABASE_URL
+cp .env.example backend/.env     # then set API_KEY to a long random value
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
----
+## Environment variables
 
-## Environment Variables
+| Variable | Description | Default |
+|---|---|---|
+| `API_KEY` | Required. Secret expected in the `X-API-Key` header | – |
+| `DATABASE_URL` | SQLAlchemy database URL | `sqlite:///./aegisflow.db` |
+| `CORS_ORIGINS` | JSON list of allowed origins | `["http://localhost:3000"]` |
+| `LOG_LEVEL` | Logging level | `INFO` |
+| `DEBUG` | FastAPI debug mode | `false` |
 
-| Variable            | Required | Default                      | Description                            |
-|---------------------|----------|------------------------------|----------------------------------------|
-| `SECRET_KEY`        | ✅ Yes   | —                            | Secret key for JWT signing             |
-| `DATABASE_URL`      | No       | `sqlite:///./disasterops.db` | SQLAlchemy connection string           |
-| `DEBUG`             | No       | `false`                      | Enable debug mode                      |
-| `CORS_ORIGINS`      | No       | `http://localhost:3000,...`  | Comma-separated allowed origins        |
-| `JWT_EXPIRE_MINUTES`| No       | `1440`                       | JWT token lifetime in minutes          |
-
----
-
-## Running Locally
+## Running locally
 
 ```bash
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+cd backend
+uvicorn main:app --reload
 ```
 
-- **Interactive Dynamic Web UI**: [http://localhost:8000/](http://localhost:8000/)
-- **Interactive API Docs (Swagger UI)**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+Interactive docs: http://localhost:8000/docs (tables are created automatically on startup).
 
----
+## Frontend
 
-## Dynamic Frontend Capabilities
-
-- **Tactical Geospatial Map (Leaflet.js)**: Live markers color-coded by severity, radar pulse alerts for critical incidents, popups with direct status actions, and click-on-map coordinate prefill.
-- **Incident Management**: Real-time CRUD operations, status escalation workflow (`reported` → `active` → `contained` → `resolved`), severity prioritization, and multi-field filtering.
-- **Resource Inventory**: Track units, deployment statuses (`available`, `deployed`, `unavailable`), 1-click deploy/recall toggles, and contact info.
-- **Tactical Analytics (Chart.js)**: Real-time visual breakdowns of incidents by severity and status pipeline, plus resource allocation and type distributions.
-- **Auto-Sync & Telemetry**: 10-second automatic polling toggle, live UTC tactical clock, and demo seed data button for instant simulation.
-
----
-
-## API Endpoints
-
-### Health
-| Method | Path      | Description    |
-|--------|-----------|----------------|
-| GET    | `/health` | Health check   |
-
-### Incidents  `/api/v1/incidents`
-| Method | Path                   | Description                              |
-|--------|------------------------|------------------------------------------|
-| POST   | `/`                    | Report a new incident                    |
-| GET    | `/`                    | List incidents (filter by status/severity) |
-| GET    | `/{incident_id}`       | Get a single incident                    |
-| PATCH  | `/{incident_id}`       | Update incident fields                   |
-| DELETE | `/{incident_id}`       | Delete an incident                       |
-
-**Query params for GET /** — `status`, `severity`, `skip`, `limit`
-
-### Resources  `/api/v1/resources`
-| Method | Path                   | Description                              |
-|--------|------------------------|------------------------------------------|
-| POST   | `/`                    | Register a new resource                  |
-| GET    | `/`                    | List resources (filter by status/type)   |
-| GET    | `/{resource_id}`       | Get a single resource                    |
-| PATCH  | `/{resource_id}`       | Update resource fields                   |
-| DELETE | `/{resource_id}`       | Delete a resource                        |
-
-**Query params for GET /** — `status`, `type`, `skip`, `limit`
-
----
-
-## Architecture Overview
-
-```
-backend/
-├── main.py          # FastAPI application entry point, CORS, startup hooks
-├── config.py        # Pydantic-settings based configuration
-├── database.py      # SQLAlchemy engine, session factory, init_db()
-├── models.py        # ORM models: Incident, Resource, ResourceDeployment
-└── routers/
-    ├── incidents.py  # CRUD routes + Pydantic schemas for Incident
-    └── resources.py  # CRUD routes + Pydantic schemas for Resource
-```
-
-**Modular Monolith** — single deployment unit with clear module boundaries (router ↔ model ↔ config).
-
----
-
-## Technology Stack
-
-| Layer       | Technology            | Version  |
-|-------------|-----------------------|----------|
-| Framework   | FastAPI               | 0.111.0  |
-| Server      | Uvicorn               | 0.29.0   |
-| ORM         | SQLAlchemy            | 2.0.30   |
-| Validation  | Pydantic v2           | 2.7.1    |
-| Config      | pydantic-settings     | 2.2.1    |
-| Migrations  | Alembic               | 1.13.1   |
-| Database    | SQLite (dev) / PostgreSQL (prod) | — |
-
----
-
-## Target Audience
-
-- **NDRF / SDMA Coordinators** — manage active incidents and track resources nationally/state-wide
-- **District Administrations** — report and monitor local incidents
-- **Field Rescue Teams** — update incident status and resource availability in real time
-
----
-
-## Core Features Implemented
-
-- ✅ **Incident CRUD** — report, list, filter, update status/severity, delete incidents
-- ✅ **Resource CRUD** — register, list, filter, update status, delete resources
-- ✅ **Resource Deployment tracking** — junction table linking resources to incidents
-- ✅ **Geo-coordinates** — latitude/longitude on incidents for map integration
-- ✅ **Filtering & pagination** — by status, severity, type on all list endpoints
-
----
-
-## Database Migrations (Alembic)
+A React + TypeScript (Vite) dashboard in `frontend/` for managing incidents and assets. Requires Node 18+.
 
 ```bash
-# Initialise (first time only)
-alembic init alembic
-
-# Generate a migration after model changes
-alembic revision --autogenerate -m "description"
-
-# Apply migrations
-alembic upgrade head
+cd frontend
+cp .env.example .env     # VITE_API_URL, defaults to http://localhost:8000
+npm install
+npm run dev              # http://localhost:3000 (matches the default CORS_ORIGINS)
 ```
 
----
+Sign in with the backend `API_KEY`; it is kept in `sessionStorage` for the browser tab only. Build for production with `npm run build`.
 
-## Testing
+## API endpoints
+
+All `/api/*` endpoints require the `X-API-Key` header.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/health` | Health check |
+| POST | `/api/incidents` | Create incident |
+| GET | `/api/incidents` | List (filters: `district`, `hazard_type`, `severity`, `status`, `skip`, `limit`) |
+| GET | `/api/incidents/{id}` | Get incident |
+| PATCH | `/api/incidents/{id}` | Update incident |
+| DELETE | `/api/incidents/{id}` | Delete incident |
+| POST | `/api/assets` | Create asset |
+| GET | `/api/assets` | List (filters: `district`, `asset_type`, `status`, `incident_id`, `skip`, `limit`) |
+| GET | `/api/assets/{id}` | Get asset |
+| PATCH | `/api/assets/{id}` | Update asset |
+| DELETE | `/api/assets/{id}` | Delete asset |
+
+Example:
 
 ```bash
-pip install pytest httpx
-pytest
+curl -X POST localhost:8000/api/incidents -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
+  -d '{"title":"River overflow","hazard_type":"flood","severity":"high","district":"Riverside"}'
 ```
+
+## Core features implemented
+
+- Basic CRUD for incidents (flood/landslide, severity, status, location, district)
+- Basic CRUD for response assets, optionally linked to an incident
+
+## Deployment
+
+Not containerised in this MVP. Run with `uvicorn main:app --host 0.0.0.0 --port 8000` behind a TLS-terminating reverse proxy, use PostgreSQL via `DATABASE_URL` for production, and keep `API_KEY` in a secret store.
