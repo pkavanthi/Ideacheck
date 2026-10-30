@@ -1,21 +1,6 @@
-import type { Asset, AssetInput, Incident, IncidentInput } from "./types";
+import type { Incident, IncidentInput, Resource, ResourceInput } from "./types";
 
-const BASE_URL: string = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-const KEY_STORAGE = "aegisflow_api_key";
-
-let apiKey = sessionStorage.getItem(KEY_STORAGE) ?? "";
-
-export const hasApiKey = () => apiKey !== "";
-
-export function setApiKey(key: string) {
-  apiKey = key;
-  sessionStorage.setItem(KEY_STORAGE, key);
-}
-
-export function clearApiKey() {
-  apiKey = "";
-  sessionStorage.removeItem(KEY_STORAGE);
-}
+const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -23,37 +8,45 @@ export class ApiError extends Error {
   }
 }
 
-function formatDetail(detail: unknown): string {
+let apiKey = "";
+let onUnauthorized: () => void = () => {};
+
+export function configureApi(key: string, unauthorizedHandler: () => void) {
+  apiKey = key;
+  onUnauthorized = unauthorizedHandler;
+}
+
+function describeDetail(detail: unknown): string {
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) {
     return detail
       .map((d) => {
         const field = Array.isArray(d?.loc) ? d.loc.filter((p: unknown) => p !== "body").join(".") : "";
-        return field ? `${field}: ${d?.msg}` : String(d?.msg ?? d);
+        return field ? `${field}: ${d?.msg}` : String(d?.msg ?? "Invalid input");
       })
       .join("; ");
   }
   return "Request failed";
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
-      method,
-      headers: {
-        "X-API-Key": apiKey,
-        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      ...init,
+      headers: { "X-API-Key": apiKey, "Content-Type": "application/json" },
     });
   } catch {
-    throw new ApiError(0, `Cannot reach the backend at ${BASE_URL}`);
+    throw new ApiError(0, "Cannot reach the server");
+  }
+  if (res.status === 401) {
+    onUnauthorized();
+    throw new ApiError(401, "Invalid or missing API key");
   }
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
     try {
-      message = formatDetail((await res.json()).detail);
+      message = describeDetail((await res.json()).detail);
     } catch {
       /* non-JSON error body */
     }
@@ -62,25 +55,31 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
 }
 
-function query(params: Record<string, string | number | undefined>): string {
-  const q = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== "") q.set(k, String(v));
-  }
-  const s = q.toString();
+function qs(params: Record<string, string | number | undefined>): string {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== "") sp.set(k, String(v));
+  });
+  const s = sp.toString();
   return s ? `?${s}` : "";
 }
 
-export const api = {
-  listIncidents: (f: Record<string, string | undefined> = {}) =>
-    request<Incident[]>("GET", `/api/incidents${query({ limit: 200, ...f })}`),
-  createIncident: (b: IncidentInput) => request<Incident>("POST", "/api/incidents", b),
-  updateIncident: (id: number, b: Partial<IncidentInput>) => request<Incident>("PATCH", `/api/incidents/${id}`, b),
-  deleteIncident: (id: number) => request<void>("DELETE", `/api/incidents/${id}`),
+const json = (body: unknown) => JSON.stringify(body);
 
-  listAssets: (f: Record<string, string | undefined> = {}) =>
-    request<Asset[]>("GET", `/api/assets${query({ limit: 200, ...f })}`),
-  createAsset: (b: AssetInput) => request<Asset>("POST", "/api/assets", b),
-  updateAsset: (id: number, b: Partial<AssetInput>) => request<Asset>("PATCH", `/api/assets/${id}`, b),
-  deleteAsset: (id: number) => request<void>("DELETE", `/api/assets/${id}`),
+export const api = {
+  listIncidents: (p: { region?: string; severity?: string; status?: string; skip?: number; limit?: number }) =>
+    request<Incident[]>(`/api/incidents${qs(p)}`),
+  createIncident: (body: IncidentInput) =>
+    request<Incident>("/api/incidents", { method: "POST", body: json(body) }),
+  updateIncident: (id: number, body: Partial<IncidentInput>) =>
+    request<Incident>(`/api/incidents/${id}`, { method: "PATCH", body: json(body) }),
+  deleteIncident: (id: number) => request<void>(`/api/incidents/${id}`, { method: "DELETE" }),
+
+  listResources: (p: { resource_type?: string; status?: string; incident_id?: number; skip?: number; limit?: number }) =>
+    request<Resource[]>(`/api/resources${qs(p)}`),
+  createResource: (body: ResourceInput) =>
+    request<Resource>("/api/resources", { method: "POST", body: json(body) }),
+  updateResource: (id: number, body: Partial<ResourceInput>) =>
+    request<Resource>(`/api/resources/${id}`, { method: "PATCH", body: json(body) }),
+  deleteResource: (id: number) => request<void>(`/api/resources/${id}`, { method: "DELETE" }),
 };

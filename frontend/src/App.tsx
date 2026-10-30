@@ -1,72 +1,84 @@
-import { FormEvent, useState } from "react";
-import { api, clearApiKey, hasApiKey, setApiKey } from "./api";
-import AssetsPage from "./AssetsPage";
-import IncidentsPage from "./IncidentsPage";
+import { FormEvent, useEffect, useState } from "react";
+import { api, configureApi } from "./api";
+import IncidentsPage from "./components/IncidentsPage";
+import ResourcesPage from "./components/ResourcesPage";
 
-function Login({ onLogin }: { onLogin: () => void }) {
-  const [key, setKey] = useState("");
-  const [error, setError] = useState("");
+const STORAGE_KEY = "resilience_api_key";
+type Tab = "incidents" | "resources";
+
+export default function App() {
+  const [key, setKey] = useState<string>(() => sessionStorage.getItem(STORAGE_KEY) ?? "");
+  const [tab, setTab] = useState<Tab>("incidents");
+  const [loginError, setLoginError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [authed, setAuthed] = useState(false);
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
+  const logout = (message = "") => {
+    sessionStorage.removeItem(STORAGE_KEY);
+    setAuthed(false);
+    setKey("");
+    setLoginError(message);
+  };
+
+  const login = async (candidate: string) => {
     setBusy(true);
-    setError("");
-    setApiKey(key.trim());
+    setLoginError("");
+    configureApi(candidate, () => logout("Session expired or API key invalid"));
     try {
-      await api.listIncidents({ limit: "1" });
-      onLogin();
-    } catch (err) {
-      clearApiKey();
-      setError((err as Error).message);
+      await api.listIncidents({ limit: 1 });
+      sessionStorage.setItem(STORAGE_KEY, candidate);
+      setKey(candidate);
+      setAuthed(true);
+    } catch (e) {
+      if (!(e instanceof Error) || e.message !== "Invalid or missing API key") {
+        setLoginError(e instanceof Error ? e.message : "Login failed");
+      }
+    } finally {
       setBusy(false);
     }
+  };
+
+  // Restore a session-stored key on first load.
+  useEffect(() => {
+    if (key) void login(key);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const value = String(new FormData(e.currentTarget).get("key") ?? "").trim();
+    if (value) void login(value);
+  };
+
+  if (!authed) {
+    return (
+      <div className="login-wrap">
+        <form className="card login" onSubmit={onSubmit}>
+          <h1>National Resilience Intelligence Backbone</h1>
+          <p className="muted">Enter your API key to continue.</p>
+          <input name="key" type="password" placeholder="X-API-Key" autoFocus autoComplete="off" />
+          {loginError && <div className="error" role="alert">{loginError}</div>}
+          <button className="btn primary" disabled={busy}>{busy ? "Checking…" : "Sign in"}</button>
+        </form>
+      </div>
+    );
   }
 
   return (
-    <div className="login">
-      <form onSubmit={submit}>
-        <h1>AegisFlow</h1>
-        <p className="muted">Enter the API key configured on the backend.</p>
-        <input type="password" placeholder="API key" value={key} onChange={(e) => setKey(e.target.value)} required autoFocus />
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={busy}>
-          Sign in
-        </button>
-      </form>
-    </div>
-  );
-}
-
-export default function App() {
-  const [authed, setAuthed] = useState(hasApiKey());
-  const [tab, setTab] = useState<"incidents" | "assets">("incidents");
-
-  if (!authed) return <Login onLogin={() => setAuthed(true)} />;
-
-  return (
     <div className="app">
-      <header>
-        <h1>AegisFlow</h1>
+      <header className="topbar">
+        <h1>Resilience Command</h1>
         <nav>
           <button className={tab === "incidents" ? "tab active" : "tab"} onClick={() => setTab("incidents")}>
             Incidents
           </button>
-          <button className={tab === "assets" ? "tab active" : "tab"} onClick={() => setTab("assets")}>
-            Assets
+          <button className={tab === "resources" ? "tab active" : "tab"} onClick={() => setTab("resources")}>
+            Resources
           </button>
         </nav>
-        <button
-          className="secondary"
-          onClick={() => {
-            clearApiKey();
-            setAuthed(false);
-          }}
-        >
-          Sign out
-        </button>
+        <button className="btn" onClick={() => logout()}>Sign out</button>
       </header>
-      <main>{tab === "incidents" ? <IncidentsPage /> : <AssetsPage />}</main>
+      <main>{tab === "incidents" ? <IncidentsPage /> : <ResourcesPage />}</main>
     </div>
   );
 }
